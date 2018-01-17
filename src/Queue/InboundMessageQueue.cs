@@ -26,7 +26,7 @@ namespace Messaging.Queue
         protected IConnectionFactory factory;
         protected string consumerTag;
         protected string queueName;
-        public event MessageReceivedDelegate MessageReceivedEvent;
+        public event MessageReceivedDelegate MessageReceived;
         protected readonly static object locker = new object();
         protected bool disposedValue = false;
 
@@ -128,7 +128,7 @@ namespace Messaging.Queue
                               Message = Encoding.UTF8.GetString(eventArgs.Body)
                           };
 
-                          MessageReceivedEvent?.Invoke(messageWrapper);
+                          MessageReceived?.Invoke(messageWrapper);
                       }
                       catch (Exception exception)
                       {
