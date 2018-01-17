@@ -13,27 +13,27 @@ using System.Text;
 
 namespace Messaging.Queue
 {
-    public class InboundMessageQueue : IInboundMessageQueue
+    public class OutboundMessageQueue : IOutboundMessageQueue
     {
         protected IOptions<CloudFoundryServicesOptions> cfOptions;
-        protected IOptions<InboundQueueConfigurationOptions> queueConfigOptions;
+        protected IOptions<OutboundQueueConfigurationOptions> queueConfigOptions;
         protected IOptions<DlxQueueConfigurationOptions> dealLetterConfigurationOptions;
-        ILogger<InboundMessageQueue> logger;
+        ILogger<OutboundMessageQueue> logger;
         protected Service queueBingingService;
         protected IConnection connection;
         protected IModel channel;
         protected IBasicProperties basicProperties;
         protected IConnectionFactory factory;
-        protected string consumerTag;
+        protected string exchangeName;
         protected string queueName;
-        public event MessageReceivedDelegate MessageReceivedEvent;
-        protected readonly static object locker = new object();
+        protected string[] routingKeysFromConfiguration;
         protected bool disposedValue = false;
+        private bool isQueueBindingRequired;
 
-        public InboundMessageQueue(IOptions<CloudFoundryServicesOptions> cfOptions,
-                                    IOptions<InboundQueueConfigurationOptions> queueConfigOptions,
+        public OutboundMessageQueue(IOptions<CloudFoundryServicesOptions> cfOptions,
+                                    IOptions<OutboundQueueConfigurationOptions> queueConfigOptions,
                                     IOptions<DlxQueueConfigurationOptions> dealLetterConfigurationOptions,
-                                    ILogger<InboundMessageQueue> logger)
+                                    ILogger<OutboundMessageQueue> logger)
         {
             this.cfOptions = cfOptions;
             this.queueConfigOptions = queueConfigOptions;
@@ -41,20 +41,23 @@ namespace Messaging.Queue
             this.logger = logger;
 
             queueBingingService = cfOptions.Value.Services.FirstOrDefault(Service => Service.Name == queueConfigOptions.Value.ServiceInstanceName);
+            routingKeysFromConfiguration = queueConfigOptions.Value.RoutingKeysCsv.Split(',');
+
+            isQueueBindingRequired = queueConfigOptions.Value.ExchangeType != ExchangeType.Topic && queueConfigOptions.Value.ExchangeType != ExchangeType.Fanout;
 
             Initialize();
         }
 
         private void Initialize()
         {
-            logger.LogInformation($"Initializing Inbound Queue - {queueConfigOptions.Value.QueueName}");
-            logger.LogDebug($"Initializing Inbound Queue with Configuration- {JsonConvert.SerializeObject(queueConfigOptions.Value)}");
+            logger.LogInformation($"Initializing Outbound Queue - {queueConfigOptions.Value.QueueName}");
+            logger.LogDebug($"Initializing Outbound Queue with Configuration- {JsonConvert.SerializeObject(queueConfigOptions.Value)}");
 
             factory = CreateConnectionFactory();
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
 
-            var exchangeName = $"{queueConfigOptions.Value.ExchangeName}-{queueConfigOptions.Value.ExchangeType}";
+            exchangeName = $"{queueConfigOptions.Value.ExchangeName}-{queueConfigOptions.Value.ExchangeType}";
             var properties = new Dictionary<string, object>();
 
             channel.ExchangeDeclare(exchangeName, queueConfigOptions.Value.ExchangeType);
@@ -62,6 +65,18 @@ namespace Messaging.Queue
             CreateDeadLetterExchange(properties);
             properties["x-max-length"] = queueConfigOptions.Value.MaximumQueueLength;
 
+            if (isQueueBindingRequired)
+                DeclareQueue(properties);
+
+            channel.BasicQos(0, queueConfigOptions.Value.PrefetchCount, false);
+
+            basicProperties = channel.CreateBasicProperties();
+            basicProperties.Expiration = (queueConfigOptions.Value.MessageExpirationInSeconds * 1000).ToString();
+            basicProperties.Persistent = queueConfigOptions.Value.IsPersistent;
+        }
+
+        protected virtual void DeclareQueue(Dictionary<string, object> properties)
+        {
             queueName = channel.QueueDeclare(queueConfigOptions.Value.QueueName, queueConfigOptions.Value.IsDurable, false, queueConfigOptions.Value.AutoDelete, properties).QueueName;
 
             if (!queueConfigOptions.Value.RoutingKeysCsv.Split(',').Any())
@@ -69,12 +84,6 @@ namespace Messaging.Queue
             else
                 foreach (var routingKey in queueConfigOptions.Value.RoutingKeysCsv.Split(','))
                     channel.QueueBind(queueName, exchangeName, routingKey.Trim(), null);
-
-            channel.BasicQos(0, queueConfigOptions.Value.PrefetchCount, false);
-
-            basicProperties = channel.CreateBasicProperties();
-            basicProperties.Expiration = (queueConfigOptions.Value.MessageExpirationInSeconds * 1000).ToString();
-            basicProperties.Persistent = queueConfigOptions.Value.IsPersistent;
         }
 
         private void CreateDeadLetterExchange(Dictionary<string, object> properties)
@@ -103,65 +112,37 @@ namespace Messaging.Queue
             };
         }
 
-        protected virtual EventingBasicConsumer CreateEventingConsumer()
+        public virtual void Publish(IQueueMessage message, string correlationId, string replyTo, params string[] routingKeys)
         {
-            return new EventingBasicConsumer(channel);
+            var serializedMessage = JsonConvert.SerializeObject(message);
+            var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
+
+            routingKeys = (routingKeys == null || routingKeys.Any())
+                            ? (routingKeysFromConfiguration.Any()
+                                ? routingKeysFromConfiguration
+                                : new[] { string.Empty })
+                            : routingKeys;
+
+            basicProperties.CorrelationId = correlationId;
+            basicProperties.ReplyTo = replyTo;
+
+            foreach (var routingKey in routingKeys)
+            {
+                if (isQueueBindingRequired)
+                    channel.QueueBind(queueName, exchangeName, routingKey.Trim(), null);
+
+                channel.BasicPublish(exchangeName, routingKey.Trim(), basicProperties, messageBody);
+            }
         }
 
-        public void StartConsumption()
+        public void Close()
         {
-            var consumer = CreateEventingConsumer();
-
-            consumer.Received += (channel, eventArgs) =>
-              {
-                  lock (locker)
-                  {
-                      InboundMessageWrapper messageWrapper = null;
-
-                      try
-                      {
-                          messageWrapper = new InboundMessageWrapper
-                          {
-                              DeliveryTag = eventArgs.DeliveryTag,
-                              CorrelationId = eventArgs.BasicProperties.CorrelationId,
-                              ReplyTo = eventArgs.BasicProperties.ReplyTo,
-                              Message = Encoding.UTF8.GetString(eventArgs.Body)
-                          };
-
-                          MessageReceivedEvent?.Invoke(messageWrapper);
-                      }
-                      catch (Exception exception)
-                      {
-                          Reject(messageWrapper);
-                          logger.LogError(exception, $"Failed processing message, so rejecting", messageWrapper);
-                      }
-                  }
-              };
-
-            consumerTag = channel.BasicConsume(queueName, false, consumer);
-
-            logger.LogInformation($"Started Listening, Inbound Queue - {queueConfigOptions.Value.QueueName}");
-        }
-
-        public void StopConsumption()
-        {
-            channel.BasicCancel(consumerTag);
             channel.Close();
 
             if (connection != null && connection.IsOpen)
                 connection.Close();
 
-            logger.LogInformation($"Stopped Listening, Inbound Queue - {queueConfigOptions.Value.QueueName}");
-        }
-
-        public void Acknowledge(InboundMessageWrapper messageWrapper)
-        {
-            channel.BasicAck(messageWrapper.DeliveryTag, false);
-        }
-
-        public void Reject(InboundMessageWrapper messageWrapper)
-        {
-            channel.BasicReject(messageWrapper.DeliveryTag, false);
+            logger.LogInformation($"Closed, Outbound Queue - {queueConfigOptions.Value.QueueName}");
         }
 
         protected virtual void Dispose(bool disposing)
@@ -169,7 +150,7 @@ namespace Messaging.Queue
             if (!disposedValue)
             {
                 if (disposing)
-                    StopConsumption();
+                    Close();
 
                 disposedValue = true;
             }

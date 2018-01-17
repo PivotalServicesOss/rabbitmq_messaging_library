@@ -1,9 +1,10 @@
+using System;
 using Messaging.Message;
 
 namespace Messaging.Queue
 {
     public delegate void MessageReceivedDelegate(InboundMessageWrapper messageWrapper);
-    public interface IInboundMessageQueue
+    public interface IInboundMessageQueue : IDisposable
     {
         event MessageReceivedDelegate MessageReceivedEvent;
         void StartConsumption();

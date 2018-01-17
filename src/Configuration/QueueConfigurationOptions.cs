@@ -2,7 +2,7 @@ using RabbitMQ.Client;
 
 namespace Messaging.Configuration
 {
-    public class QueueConfigurationOptions
+    public abstract class QueueConfigurationOptions
     {
         public string ServiceInstanceName{ get; set; }
         public string ExchangeName{ get; set; } = string.Empty;
