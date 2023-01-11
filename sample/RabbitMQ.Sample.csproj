@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Rabbit.Messaging.csproj" />
+    <ProjectReference Include="..\src\Rabbit.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

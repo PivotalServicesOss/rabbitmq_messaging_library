@@ -116,14 +116,14 @@ public class Consumer<T> : IConsumer<T>
 
         channel.ExchangeDeclare(exchange: dlxExchangeName, type: ExchangeType.Fanout);
         dlxProperties["x-max-length"] = deadLetterQueueConfiguration.MaximumQueueLength;
-        channel.QueueDeclare(queue: dlxQueueName, 
-                             durable: false, 
-                             exclusive: false, 
-                             autoDelete: false, 
+        channel.QueueDeclare(queue: dlxQueueName,
+                             durable: false,
+                             exclusive: false,
+                             autoDelete: false,
                              arguments: dlxProperties);
-        channel.QueueBind(queue: dlxQueueName, 
-                          exchange: dlxExchangeName, 
-                          routingKey: string.Empty, 
+        channel.QueueBind(queue: dlxQueueName,
+                          exchange: dlxExchangeName,
+                          routingKey: string.Empty,
                           arguments: null);
         properties["x-dead-letter-exchange"] = dlxExchangeName;
     }

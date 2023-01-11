@@ -1,4 +1,5 @@
 using PivotalServices.RabbitMQ.Messaging;
+
 namespace RabbitMQ.Sample;
 
 public static class Program
@@ -14,6 +15,8 @@ public static class Program
             cfg.AddProducer<MyMessage>("my-exg", "my-queue");
             cfg.AddConsumer<MyMessage>("my-exg", "my-queue");
         });
+
+        builder.Services.AddSingleton<ConsumerProcessor>();
 
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
