@@ -2,11 +2,11 @@
 
 > Testing not completed yet, so use this with caution. 
 
-#### Kindly raise any issues at [Project Issues](https://github.com/alfusinigoj/rabbitmq_messaging_library/issues)
+#### Kindly raise any issues at [Project Issues](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/issues)
 
 Build | PivotalServices.RabbitMQ.Messaging |
 --- | --- |
-[![Nuget (Prod Release)](https://github.com/alfusinigoj/rabbitmq_messaging_library/actions/workflows/prod-release-pipeline.yml/badge.svg)](https://github.com/alfusinigoj/rabbitmq_messaging_library/actions/workflows/prod-release-pipeline.yml) | [![NuGet](https://img.shields.io/nuget/v/PivotalServices.MoqExtensions.DataReader.svg?style=flat-square)](http://www.nuget.org/packages/PivotalServices.MoqExtensions.DataReader)
+[![Nuget (Prod Release)](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/actions/workflows/prod-release-pipeline.yml/badge.svg)](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/actions/workflows/prod-release-pipeline.yml) | [![NuGet](https://img.shields.io/nuget/v/PivotalServices.RabbitMQ.Messaging.svg?style=flat-square)](http://www.nuget.org/packages/PivotalServices.RabbitMQ.Messaging)
 
 ### Salient features
 - Simple RabbitMQ library which acts as a simple extension to RabbitMQ.Client library
@@ -102,10 +102,17 @@ Build | PivotalServices.RabbitMQ.Messaging |
 
 - For more details, please refer to the sample project
 
+### Run RabbitMQ
+
+- Use the below command, but make sure docker is already installed. You can use the official version as well including management options
+
+```bash
+    docker run --publish 5672:5672 steeltoeoss/rabbitmq
+```
 
 ### Contributions are welcome!
 
-docker run -d --hostname rabbitmq --name rabbitmq -e RABBITMQ_DEFAULT_VHOST=rabbitmq_vhost rabbitmq:3-management
+
 
 
 
