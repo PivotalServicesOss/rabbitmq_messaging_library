@@ -1,5 +1,7 @@
 ### A simple messaging library that uses RabbitMQ
 
+> Testing not completed yet, so use this with caution. 
+
 #### Kindly raise any issues at [Project Issues](https://github.com/alfusinigoj/rabbitmq_messaging_library/issues)
 
 Build | PivotalServices.RabbitMQ.Messaging |
