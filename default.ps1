@@ -66,7 +66,7 @@ task Restore {
     }
 }
 
-task Clean -depends Restore{
+task Clean {
     Write-Host "******************* Now cleaning the solution and artifacts *********************"
     if (Test-Path $publish_dir) {
         delete_directory $publish_dir
@@ -77,7 +77,7 @@ task Clean -depends Restore{
     if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
-task Compile -depends Restore {
+task Compile {
     Write-Host "******************* Now compiling the solution *********************"
     exec { 
         & $dotnet_exe msbuild /t:build /v:m /p:Configuration=$project_config /nologo /p:Platform="Any CPU" /nologo $solution_file 
@@ -85,7 +85,7 @@ task Compile -depends Restore {
     if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
-task UnitTest -depends Compile{
+task UnitTest {
     Write-Host "******************* Now running unit tests *********************"
     Push-Location $base_dir
     $test_projects = @((Get-ChildItem -Recurse -Filter "*Unit.Test.csproj").FullName) -join '~'
@@ -101,7 +101,7 @@ task UnitTest -depends Compile{
     if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
  }
 
- task IntegrationTest -depends Compile{
+ task IntegrationTest {
     Write-Host "******************* Now running IntegrationTest Tests *********************"
     Push-Location $base_dir
     $test_projects = @((Get-ChildItem -Recurse -Filter "*Integration.Test.csproj").FullName) -join '~'
@@ -117,7 +117,7 @@ task UnitTest -depends Compile{
     if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
  }
 
- task Pack -depends Compile{
+ task Pack {
     Write-Host "******************* Now creating nuget package(s) *********************"
 	Push-Location $base_dir
 	$projects = @(Get-ChildItem -Recurse -Filter "*.csproj" | Where-Object {$_.Directory -like '*src*'}).FullName	
@@ -134,7 +134,7 @@ task UnitTest -depends Compile{
     if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
-task Push2Local -depends Pack {
+task Push2Local {
     Write-Host "******************* Now pushing available nuget package(s) to $local_nuget_repo *********************"
 	Push-Location $base_dir
 	$packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" | Where-Object {$_.Directory -like "*publish-artifacts*"}).FullName

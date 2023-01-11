@@ -20,6 +20,7 @@ public class ProducerController : ControllerBase
     [HttpGet("send/{text}")]
     public void Send(string text)
     {
-        producer.Send(new OutboundMessage<MyMessage>() { Content = new MyMessage { SomeText = text } });
+        var myMessage = new MyMessage { SomeText = text };
+        producer.Send(new OutboundMessage<MyMessage>(myMessage));
     }
 }

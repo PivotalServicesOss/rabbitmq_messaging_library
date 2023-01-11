@@ -154,13 +154,12 @@ public class Consumer<T> : IConsumer<T>
 
                   try
                   {
-                      message = new InboundMessage<T>
-                      {
-                          DeliveryTag = eventArgs.DeliveryTag,
-                          CorrelationId = eventArgs.BasicProperties.CorrelationId,
-                          ReplyTo = eventArgs.BasicProperties.ReplyTo,
-                          Content = JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(eventArgs.Body.ToArray()))
-                      };
+                      message = new InboundMessage<T>(
+                          JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(eventArgs.Body.ToArray())),
+                          eventArgs.BasicProperties.ReplyTo,
+                          eventArgs.BasicProperties.CorrelationId,
+                          eventArgs.DeliveryTag
+                      );
 
                       logger.LogDebug($"Received message {JsonConvert.SerializeObject(message)}");
                       logger.LogInformation($"Received a message with CorreleationId {message.CorrelationId}");
