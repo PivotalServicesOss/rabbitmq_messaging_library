@@ -128,7 +128,7 @@ public class Consumer<T> : IConsumer<T>
         properties["x-dead-letter-exchange"] = dlxExchangeName;
     }
 
-    protected virtual IConnectionFactory CreateConnectionFactory()
+    protected IConnectionFactory CreateConnectionFactory()
     {
         return new ConnectionFactory
         {
@@ -140,7 +140,7 @@ public class Consumer<T> : IConsumer<T>
         };
     }
 
-    protected virtual EventingBasicConsumer CreateEventingConsumer()
+    protected EventingBasicConsumer CreateEventingConsumer()
     {
         return new EventingBasicConsumer(channel);
     }
@@ -162,8 +162,11 @@ public class Consumer<T> : IConsumer<T>
                           DeliveryTag = eventArgs.DeliveryTag,
                           CorrelationId = eventArgs.BasicProperties.CorrelationId,
                           ReplyTo = eventArgs.BasicProperties.ReplyTo,
-                          Body = JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(eventArgs.Body.ToArray()))
+                          Content = JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(eventArgs.Body.ToArray()))
                       };
+
+                      logger.LogDebug($"Received message {JsonConvert.SerializeObject(message)}");
+                      logger.LogInformation($"Received a message with Correleation Id {message.CorrelationId}");
 
                       MessageReceived?.Invoke(message);
                   }
@@ -182,6 +185,9 @@ public class Consumer<T> : IConsumer<T>
 
     public void StopConsumption()
     {
+        if(!connection.IsOpen)
+            return;
+            
         channel.BasicCancel(consumerTag);
         channel.Close();
 

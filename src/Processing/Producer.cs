@@ -8,7 +8,7 @@ namespace PivotalServices.RabbitMQ.Messaging;
 
 public interface IProducer<T> : IDisposable
 {
-    void Publish(OutboundMessage<T> message);
+    void Send(OutboundMessage<T> message);
     void Close();
 }
 
@@ -81,7 +81,7 @@ public class Producer<T> : IProducer<T>
         basicProperties.Persistent = queueConfiguration.IsPersistent;
     }
 
-    protected virtual void DeclareQueue(Dictionary<string, object> properties)
+    protected void DeclareQueue(Dictionary<string, object> properties)
     {
         queueName = channel.QueueDeclare(queue: queueConfiguration.QueueName,
                                          durable: queueConfiguration.IsDurable,
@@ -139,9 +139,9 @@ public class Producer<T> : IProducer<T>
         };
     }
 
-    public virtual void Publish(OutboundMessage<T> message)
+    public void Send(OutboundMessage<T> message)
     {
-        var serializedMessage = JsonConvert.SerializeObject(message.Body);
+        var serializedMessage = JsonConvert.SerializeObject(message.Content);
         var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
 
         if(message.RouteKeys == null || !message.RouteKeys.Any())
@@ -168,6 +168,8 @@ public class Producer<T> : IProducer<T>
             }
 
             channel.BasicPublish(exchangeName, routingKey.Trim(), basicProperties, messageBody);
+            logger.LogDebug($"Sent message {JsonConvert.SerializeObject(message)}");
+            logger.LogInformation($"Sent a message with Correleation Id {message.CorrelationId}");
         }
     }
 

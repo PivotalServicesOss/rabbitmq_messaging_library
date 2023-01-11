@@ -12,11 +12,9 @@ public static class Program
         // Add services to the container.
 
         builder.Services.AddRabbitMQ(cfg => {
-            cfg.AddProducer<MyMessage>("my-exg", "my-queue");
-            cfg.AddConsumer<MyMessage>("my-exg", "my-queue");
+            cfg.AddProducer<MyMessage>("my-exg2", "my-queue2");
+            cfg.AddConsumer<MyMessage>("my-exg2", "my-queue2");
         });
-
-        builder.Services.AddSingleton<ConsumerProcessor>();
 
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
