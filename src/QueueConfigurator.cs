@@ -16,12 +16,10 @@ public interface IQueueConfigurator
 
 public class QueueConfigurator : IQueueConfigurator
 {
-    private QueueConfiguration queueConfiguration;
     private readonly IServiceCollection services;
 
-    public QueueConfigurator(QueueConfiguration queueConfiguration, IServiceCollection services)
+    public QueueConfigurator(IServiceCollection services)
     {
-        this.queueConfiguration = queueConfiguration;
         this.services = services;
     }
 
@@ -29,7 +27,8 @@ public class QueueConfigurator : IQueueConfigurator
                                 Action<QueueConfiguration> configure = null, 
                                 Action<DlxQueueConfiguration> configureDlx = null)
     {
-        services.Configure<QueueConfiguration>(nameof(T), cfg =>
+        var optionsName = typeof(T).Name;
+        services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
@@ -37,12 +36,12 @@ public class QueueConfigurator : IQueueConfigurator
 
         if (configure != null)
         {
-            services.PostConfigure<QueueConfiguration>(nameof(T), configure);
+            services.PostConfigure<QueueConfiguration>(optionsName, configure);
         }
 
         if (configureDlx != null)
         {
-            services.PostConfigure<DlxQueueConfiguration>(nameof(T), configureDlx);
+            services.PostConfigure<DlxQueueConfiguration>(optionsName, configureDlx);
         }
 
         services.AddSingleton<IConsumer<T>,Consumer<T>>();
@@ -53,7 +52,8 @@ public class QueueConfigurator : IQueueConfigurator
                                 Action<QueueConfiguration> configure = null,
                                 Action<DlxQueueConfiguration> configureDlx = null)
     {
-        services.Configure<QueueConfiguration>(nameof(T), cfg =>
+        var optionsName = typeof(T).Name;
+        services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
@@ -61,12 +61,12 @@ public class QueueConfigurator : IQueueConfigurator
 
         if (configure != null)
         {
-            services.PostConfigure<QueueConfiguration>(nameof(T), configure);
+            services.PostConfigure<QueueConfiguration>(optionsName, configure);
         }
 
         if (configureDlx != null)
         {
-            services.PostConfigure<DlxQueueConfiguration>(nameof(T), configureDlx);
+            services.PostConfigure<DlxQueueConfiguration>(optionsName, configureDlx);
         }
 
         services.AddSingleton<IProducer<T>,Producer<T>>();

@@ -24,7 +24,7 @@ public class Producer<T> : IProducer<T>
     protected IConnectionFactory factory;
     protected string exchangeName;
     protected string queueName;
-    protected string[] routingKeysFromConfiguration;
+    protected List<string> routingKeysFromConfiguration;
     protected bool disposedValue = false;
     private bool isQueueBindingRequired;
 
@@ -33,11 +33,14 @@ public class Producer<T> : IProducer<T>
                 IOptionsMonitor<DlxQueueConfiguration> deadLetterQueueConfigurationOptions,
                 ILogger<Producer<T>> logger)
     {
+        var optionsName = typeof(T).Name;
         this.serviceConfigurationOptions = serviceConfigurationOptions;
-        this.queueConfiguration = queueConfigurationOptions.Get(nameof(T));
-        this.deadLetterQueueConfiguration = deadLetterQueueConfigurationOptions.Get(nameof(T));
+        this.queueConfiguration = queueConfigurationOptions.Get(optionsName);
+        this.deadLetterQueueConfiguration = deadLetterQueueConfigurationOptions.Get(optionsName);
         this.logger = logger;
-        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv.Split(',');
+        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null 
+                                            ? new List<string>() 
+                                            : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
         isQueueBindingRequired = queueConfiguration.ExchangeType != ExchangeType.Topic
                                     && queueConfiguration.ExchangeType != ExchangeType.Fanout;
         Initialize();
@@ -45,14 +48,14 @@ public class Producer<T> : IProducer<T>
 
     private void Initialize()
     {
-        logger.LogInformation($"Initializing {nameof(Producer<T>)} - {queueConfiguration.QueueName}");
-        logger.LogDebug($"Initializing {nameof(Producer<T>)} with Configuration- {JsonConvert.SerializeObject(queueConfiguration)}");
+        logger.LogInformation($"Initializing Producer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
+        logger.LogDebug($"Initializing Producer<{typeof(T).Name}> with Configuration- {JsonConvert.SerializeObject(queueConfiguration)}");
 
         factory = CreateConnectionFactory();
         connection = factory.CreateConnection();
         channel = connection.CreateModel();
 
-        exchangeName = $"{queueConfiguration.ExchangeName}-{queueConfiguration.ExchangeType}";
+        exchangeName = queueConfiguration.ExchangeName;
         var properties = new Dictionary<string, object>();
 
         channel.ExchangeDeclare(exchange: exchangeName,
@@ -90,7 +93,7 @@ public class Producer<T> : IProducer<T>
                                          arguments: properties
                                          ).QueueName;
 
-        if (!queueConfiguration.RoutingKeysCsv.Split(',').Any())
+        if (!routingKeysFromConfiguration.Any())
         {
             channel.QueueBind(queue: queueName,
                               exchange: exchangeName,
@@ -99,7 +102,7 @@ public class Producer<T> : IProducer<T>
         }
         else
         {
-            foreach (var routingKey in queueConfiguration.RoutingKeysCsv.Split(','))
+            foreach (var routingKey in routingKeysFromConfiguration)
             {
                 channel.QueueBind(queue: queueName,
                               exchange: exchangeName,
@@ -148,11 +151,11 @@ public class Producer<T> : IProducer<T>
         {
             if(routingKeysFromConfiguration.Any())
             {
-                message.RouteKeys = routingKeysFromConfiguration;
+                message.RouteKeys = routingKeysFromConfiguration.ToArray();
             }
             else
             {
-                message.RouteKeys = new[] { string.Empty };
+                message.RouteKeys = new[] { queueName };
             }
         }
 
@@ -180,7 +183,7 @@ public class Producer<T> : IProducer<T>
         if (connection != null && connection.IsOpen)
             connection.Close();
 
-        logger.LogInformation($"Closed, {nameof(Producer<T>)} - {queueConfiguration.QueueName}");
+        logger.LogInformation($"Closed, Producer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
     }
 
     protected virtual void Dispose(bool disposing)

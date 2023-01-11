@@ -13,7 +13,7 @@ public static class Extensions
         if (!services.Any(d => d.ImplementationType == typeof(MessageService)))
         {
             AddHostedService(services);
-            configure?.Invoke(new QueueConfigurator(new QueueConfiguration(), services));
+            configure?.Invoke(new QueueConfigurator(services));
         }
         return services;
     }

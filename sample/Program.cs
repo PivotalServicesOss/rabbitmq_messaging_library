@@ -14,7 +14,9 @@ public static class Program
 
         builder.Services.AddRabbitMQ(cfg => {
             cfg.AddProducer<MyMessage>("sample-ex", "queue-1");
+            cfg.AddProducer<MyMessage2>("sample-ex", "queue-2");
             cfg.AddConsumer<MyMessage>("sample-ex", "queue-1");
+            cfg.AddConsumer<MyMessage2>("sample-ex", "queue-2");
         });
 
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageProcessor>());

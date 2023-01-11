@@ -37,29 +37,34 @@ public class Consumer<T> : IConsumer<T>
     public event MessageReceivedDelegate<T> MessageReceived;
     protected readonly static object locker = new object();
     protected bool disposedValue = false;
+    protected List<string> routingKeysFromConfiguration;
 
     public Consumer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                     IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
                     IOptionsMonitor<DlxQueueConfiguration> deadLetterQueueConfigurationOptions,
                     ILogger<Consumer<T>> logger)
     {
+        var optionsName = typeof(T).Name;
         this.serviceConfigurationOptions = serviceConfigurationOptions;
-        this.queueConfiguration = queueConfigurationOptions.Get(nameof(T));
-        this.deadLetterQueueConfiguration = deadLetterQueueConfigurationOptions.Get(nameof(T));
+        this.queueConfiguration = queueConfigurationOptions.Get(optionsName);
+        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null 
+                                            ? new List<string>() 
+                                            : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
+        this.deadLetterQueueConfiguration = deadLetterQueueConfigurationOptions.Get(optionsName);
         this.logger = logger;
         Initialize();
     }
 
     private void Initialize()
     {
-        logger.LogInformation($"Initializing {nameof(Consumer<T>)} - {queueConfiguration.QueueName}");
-        logger.LogDebug($"Initializing {nameof(Consumer<T>)} with Configuration- {JsonConvert.SerializeObject(queueConfiguration)}");
+        logger.LogInformation($"Initializing Consumer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
+        logger.LogDebug($"Initializing Consumer<{typeof(T).Name}> with Configuration- {JsonConvert.SerializeObject(queueConfiguration)}");
 
         factory = CreateConnectionFactory();
         connection = factory.CreateConnection();
         channel = connection.CreateModel();
 
-        var exchangeName = $"{queueConfiguration.ExchangeName}-{queueConfiguration.ExchangeType}";
+        var exchangeName = queueConfiguration.ExchangeName;
         var properties = new Dictionary<string, object>();
 
         channel.ExchangeDeclare(exchange: exchangeName,
@@ -80,7 +85,7 @@ public class Consumer<T> : IConsumer<T>
                                          arguments: properties
                                          ).QueueName;
 
-        if (!queueConfiguration.RoutingKeysCsv.Split(',').Any())
+        if (!routingKeysFromConfiguration.Any())
         {
             channel.QueueBind(queue: queueName,
                                 exchange: exchangeName,
@@ -89,7 +94,7 @@ public class Consumer<T> : IConsumer<T>
         }
         else
         {
-            foreach (var routingKey in queueConfiguration.RoutingKeysCsv.Split(','))
+            foreach (var routingKey in routingKeysFromConfiguration)
             {
                 channel.QueueBind(queue: queueName,
                                     exchange: exchangeName,
@@ -176,7 +181,7 @@ public class Consumer<T> : IConsumer<T>
 
         consumerTag = channel.BasicConsume(queueName, false, consumer);
 
-        logger.LogInformation($"Started Listening, {nameof(Consumer<T>)} - {queueConfiguration.QueueName}");
+        logger.LogInformation($"Started Listening, Consumer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
     }
 
     public void StopConsumption()
@@ -190,7 +195,7 @@ public class Consumer<T> : IConsumer<T>
         if (connection != null && connection.IsOpen)
             connection.Close();
 
-        logger.LogInformation($"Stopped Listening, {nameof(Consumer<T>)} - {queueConfiguration.QueueName}");
+        logger.LogInformation($"Stopped Listening, Consumer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
     }
 
     public void Acknowledge(InboundMessage<T> message)
