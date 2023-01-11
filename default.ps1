@@ -10,7 +10,7 @@ properties {
   $remote_myget_repo = "https://www.myget.org/F/ajaganathan/api/v3/index.json"
   $date = Get-Date 
   $dotnet_exe = get-dotnet
-  $nuget = "$dotnet_exe nuget"
+  $nuget = "nuget.exe"
 }
 
 #These are aliases for other build tasks. They typically are named after the camelcase letters (rd = Rebuild Databases)
