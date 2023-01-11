@@ -1,10 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Linq;
-using System;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
-using System.Collections.Generic;
 using System.Text;
 
 namespace PivotalServices.RabbitMQ.Messaging;
@@ -136,7 +133,6 @@ public class Producer<T> : IProducer<T>
         {
             HostName = serviceConfigurationOptions.Value.HostName,
             VirtualHost = serviceConfigurationOptions.Value.Vhost,
-            Uri = new Uri(serviceConfigurationOptions.Value.Uri),
             UserName = serviceConfigurationOptions.Value.Username,
             Password = serviceConfigurationOptions.Value.Password,
             AutomaticRecoveryEnabled = true,
@@ -148,11 +144,17 @@ public class Producer<T> : IProducer<T>
         var serializedMessage = JsonConvert.SerializeObject(message.Body);
         var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
 
-        message.RouteKeys = (message.RouteKeys == null || message.RouteKeys.Any())
-                        ? (routingKeysFromConfiguration.Any()
-                            ? routingKeysFromConfiguration
-                            : new[] { string.Empty })
-                        : message.RouteKeys;
+        if(message.RouteKeys == null || !message.RouteKeys.Any())
+        {
+            if(routingKeysFromConfiguration.Any())
+            {
+                message.RouteKeys = routingKeysFromConfiguration;
+            }
+            else
+            {
+                message.RouteKeys = new[] { string.Empty };
+            }
+        }
 
         basicProperties.CorrelationId = message.CorrelationId;
         basicProperties.ReplyTo = message.ReplyTo;

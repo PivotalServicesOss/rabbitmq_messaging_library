@@ -134,7 +134,6 @@ public class Consumer<T> : IConsumer<T>
         {
             HostName = serviceConfigurationOptions.Value.HostName,
             VirtualHost = serviceConfigurationOptions.Value.Vhost,
-            Uri = new Uri(serviceConfigurationOptions.Value.Uri),
             UserName = serviceConfigurationOptions.Value.Username,
             Password = serviceConfigurationOptions.Value.Password,
             AutomaticRecoveryEnabled = true,

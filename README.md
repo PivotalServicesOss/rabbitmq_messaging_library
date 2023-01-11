@@ -19,5 +19,7 @@ Build | PivotalServices.RabbitMQ.Messaging |
 
 ### Contributions are welcome!
 
+docker run -d --hostname rabbitmq --name rabbitmq -e RABBITMQ_DEFAULT_VHOST=rabbitmq_vhost rabbitmq:3-management
+
 
 

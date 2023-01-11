@@ -46,6 +46,7 @@ public class QueueConfigurator : IQueueConfigurator
         }
 
         services.AddSingleton<IConsumer<T>,Consumer<T>>();
+        Global.ConsumerTypes.Add(typeof(IConsumer<T>));
     }
 
     public void AddProducer<T>(string exchangeName, string queueName, 

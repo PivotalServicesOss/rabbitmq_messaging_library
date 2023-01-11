@@ -25,14 +25,11 @@ public class MessageService : IHostedService
     IList<object> GetAllConsumers()
     {
         var consumers = new List<object>();
-        var types = Assembly.GetAssembly(typeof(MessageService)).GetTypes();
-        foreach (var type in types)
+        
+        foreach (var consumerType in Global.ConsumerTypes)
         {
-            if (type.Name.Contains("Consumer"))
-            {
-                var instance = this.provider.GetRequiredService(type);
-                consumers.Add(instance);
-            }
+            var instance = this.provider.GetRequiredService(consumerType);
+            consumers.Add(instance);
         }
         return consumers;
     }
