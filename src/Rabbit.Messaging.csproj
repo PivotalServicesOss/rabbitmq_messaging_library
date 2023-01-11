@@ -27,11 +27,11 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>All rights reserved.</Copyright>
-    <RepositoryUrl>https://github.com/alfusinigoj/rabbitmq_messaging_library.git</RepositoryUrl>
+    <RepositoryUrl>https://github.com/PivotalServicesOss/rabbitmq_messaging_library.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>ASP.NET;Handlers;IoC;Autofac;Unity</PackageTags>
+    <PackageTags>ASP.NET;RabbitMQ;Messaging;PivotalServicesOSS</PackageTags>
     <Description>A simple library to use consumer/producer based messaging using RabbitMQ</Description>
-    <PackageProjectUrl>https://github.com/alfusinigoj/rabbitmq_messaging_library</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/PivotalServicesOss/rabbitmq_messaging_library</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
