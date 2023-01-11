@@ -15,7 +15,7 @@ public class MessageProcessor : IHostedService
         this.consumer = consumer;
     }
 
-     public Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         consumer.MessageReceived += Received;
         return Task.CompletedTask;
