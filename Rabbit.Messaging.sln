@@ -1,0 +1,95 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C9433C1A-B88B-4F82-AC08-F723E92145FC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution_items", "solution_items", "{9760BA81-BF40-44D3-BE0B-F66E5AF203BA}"
+	ProjectSection(SolutionItems) = preProject
+		GitVersion.yml = GitVersion.yml
+		NuGet.config = NuGet.config
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F1AD0C3F-307C-4C6A-BA2C-7638204A2AE4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rabbit.Messaging", "src\Rabbit.Messaging.csproj", "{886E3A86-A468-436C-87DC-D6D28CFAC67F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Direct.Integration.Test", "test\Direct.Integration.Test\Direct.Integration.Test.csproj", "{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fanout.Integration.Test", "test\Fanout.Integration.Test\Fanout.Integration.Test.csproj", "{5C536923-F163-40CF-A9FD-DF7D39414D23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Topic.Integration.Test", "test\Topic.Integration.Test\Topic.Integration.Test.csproj", "{897AFA2A-7C81-4F4D-B013-489C7890225E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Debug|x64.Build.0 = Debug|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Debug|x86.Build.0 = Debug|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Release|x64.ActiveCfg = Release|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Release|x64.Build.0 = Release|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Release|x86.ActiveCfg = Release|Any CPU
+		{886E3A86-A468-436C-87DC-D6D28CFAC67F}.Release|x86.Build.0 = Release|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Debug|x64.Build.0 = Debug|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Debug|x86.Build.0 = Debug|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Release|x64.ActiveCfg = Release|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Release|x64.Build.0 = Release|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Release|x86.ActiveCfg = Release|Any CPU
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8}.Release|x86.Build.0 = Release|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Debug|x64.Build.0 = Debug|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Debug|x86.Build.0 = Debug|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Release|x64.ActiveCfg = Release|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Release|x64.Build.0 = Release|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Release|x86.ActiveCfg = Release|Any CPU
+		{5C536923-F163-40CF-A9FD-DF7D39414D23}.Release|x86.Build.0 = Release|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Debug|x64.Build.0 = Debug|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Debug|x86.Build.0 = Debug|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Release|x64.ActiveCfg = Release|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Release|x64.Build.0 = Release|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Release|x86.ActiveCfg = Release|Any CPU
+		{897AFA2A-7C81-4F4D-B013-489C7890225E}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E4DFC788-1A62-4ECC-B20A-9CAF37CB41B8} = {F1AD0C3F-307C-4C6A-BA2C-7638204A2AE4}
+		{5C536923-F163-40CF-A9FD-DF7D39414D23} = {F1AD0C3F-307C-4C6A-BA2C-7638204A2AE4}
+		{897AFA2A-7C81-4F4D-B013-489C7890225E} = {F1AD0C3F-307C-4C6A-BA2C-7638204A2AE4}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4B130169-573A-4811-BC2A-1571A4D523BD}
+	EndGlobalSection
+EndGlobal
