@@ -18,7 +18,6 @@ public static class Program
         });
 
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageProcessor>());
-        //builder.Services.AddHostedService<MessageProcessor>();
 
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

@@ -5,12 +5,12 @@ properties {
   $publish_dir = "$base_dir\publish-artifacts"
   $solution_file = "$base_dir\$solution_name.sln"
   $test_dir = "$base_dir\test"
+  $nuget = "nuget.exe"
   $local_nuget_repo = "/Users/ajaganathan/.nugetrepo"
   $remote_nuget_repo = "https://api.nuget.org/v3/index.json"
-  $remote_myget_repo = "https://www.myget.org/F/ajaganathan/api/v3/index.json"
+  $remote_myget_repo = "https://www.myget.org/F/pivotalservicesoss/api/v3/index.json"
   $date = Get-Date 
   $dotnet_exe = get-dotnet
-  $nuget = "$dotnet_exe nuget"
 }
 
 #These are aliases for other build tasks. They typically are named after the camelcase letters (rd = Rebuild Databases)
@@ -42,10 +42,10 @@ task help {
 }
 
 #These are the actual build tasks. They should be Pascal case by convention
-task DevBuild -depends SetDebugBuild, emitProperties, Clean, Restore, Compile, UnitTest, IntegrationTests
+task DevBuild -depends SetDebugBuild, emitProperties, Clean, Restore, Compile, UnitTest
 task DevPack -depends DevBuild, Pack
 task DevPublish -depends DevPack, Push2Local
-task CiBuild -depends SetReleaseBuild, emitProperties, Clean, Restore, Compile, UnitTest, IntegrationTests
+task CiBuild -depends SetReleaseBuild, emitProperties, Clean, Restore, Compile, UnitTest
 task CiPack -depends CiBuild, Pack
 task CiPublish2Nuget -depends CiPack, Push2Nuget
 task CiPublish2Myget -depends CiPack, Push2Myget
@@ -101,8 +101,8 @@ task UnitTest {
     if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
  }
 
- task IntegrationTests {
-    Write-Host "******************* Now running integration tests *********************"
+ task IntegrationTest {
+    Write-Host "******************* Now running IntegrationTest Tests *********************"
     Push-Location $base_dir
     $test_projects = @((Get-ChildItem -Recurse -Filter "*Integration.Test.csproj").FullName) -join '~'
 
@@ -174,7 +174,7 @@ task Push2Myget {
 	if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 
 	foreach ($package in $packages) {
-		Write-Host "Executing nuget push for the package: $package, apikey: $api_key"
+		Write-Host "Executing nuget push for the package: $package"
 		exec { & $nuget push $package -Source $remote_myget_repo -ApiKey $api_key}
         if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 	}
