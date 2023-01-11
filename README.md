@@ -17,6 +17,23 @@ Build | PivotalServices.RabbitMQ.Messaging |
 ### Usage Instructions
 - Install package [PivotalServices.RabbitMQ.Messaging](https://www.nuget.org/packages/PivotalServices.RabbitMQ.Messaging)
 
+#### Connecting to RabbitMQ
+- If you don't have a running instance of RabbitMQ, refer to `Run RabbitMQ` section below.
+- Add a confuguration section in the `appsettings.json` as below or as appropriate environment variables.
+
+```json
+    {
+      "RabbitMq": {
+        "HostName": "",
+        "Vhost": "",
+        "Username": "",
+        "Password": ""
+      }
+    }
+```
+
+- If not provided, the default values `HostName='localhost', Vhost='/', Username='guest' and Password='guest'` will be used.
+
 #### For adding a publisher/producer of messages
 
 - Add a producer for a message type `MyMessage` as below
