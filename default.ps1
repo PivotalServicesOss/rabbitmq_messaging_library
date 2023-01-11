@@ -88,13 +88,29 @@ task Compile -depends Restore {
 task UnitTest -depends Compile{
     Write-Host "******************* Now running unit tests *********************"
     Push-Location $base_dir
-    $test_projects = @((Get-ChildItem -Recurse -Filter "*Tests.csproj").FullName) -join '~'
+    $test_projects = @((Get-ChildItem -Recurse -Filter "*Unit.Test.csproj").FullName) -join '~'
 
     foreach($test_project in $test_projects.Split("~"))
     {
         Write-Host "Executing tests on: $test_project"
         exec {
             & $dotnet_exe test $test_project --settings "$base_dir/.runsettings" -- xunit.parallelizeTestCollections=true
+        }
+    }
+    Pop-Location
+    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+ }
+
+ task IntegrationTest -depends Compile{
+    Write-Host "******************* Now running IntegrationTest Tests *********************"
+    Push-Location $base_dir
+    $test_projects = @((Get-ChildItem -Recurse -Filter "*Integration.Test.csproj").FullName) -join '~'
+
+    foreach($test_project in $test_projects.Split("~"))
+    {
+        Write-Host "Executing tests on: $test_project"
+        exec {
+            & $dotnet_exe test $test_project -- xunit.parallelizeTestCollections=false
         }
     }
     Pop-Location
