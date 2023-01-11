@@ -42,10 +42,10 @@ task help {
 }
 
 #These are the actual build tasks. They should be Pascal case by convention
-task DevBuild -depends SetDebugBuild, emitProperties, Restore, Clean, Compile, UnitTest
+task DevBuild -depends SetDebugBuild, emitProperties, Clean, Restore, Compile, UnitTest
 task DevPack -depends DevBuild, Pack
 task DevPublish -depends DevPack, Push2Local
-task CiBuild -depends SetReleaseBuild, emitProperties, Restore, Clean, Compile, UnitTest
+task CiBuild -depends SetReleaseBuild, emitProperties, Clean, Restore, Compile, UnitTest
 task CiPack -depends CiBuild, Pack
 task CiPublish2Nuget -depends CiPack, Push2Nuget
 task CiPublish2Myget -depends CiPack, Push2Myget
