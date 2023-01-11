@@ -7,7 +7,7 @@ properties {
   $test_dir = "$base_dir\test"
   $local_nuget_repo = "/Users/ajaganathan/.nugetrepo"
   $remote_nuget_repo = "https://api.nuget.org/v3/index.json"
-  $remote_myget_repo = "https://www.myget.org/F/ajaganathan/api/v3/index.json"
+  $remote_myget_repo = "https://www.myget.org/F/pivotalservicesoss/api/v3/index.json"
   $date = Get-Date 
   $dotnet_exe = get-dotnet
   $nuget = "nuget.exe"
