@@ -169,7 +169,7 @@ public class Producer<T> : IProducer<T>
 
             channel.BasicPublish(exchangeName, routingKey.Trim(), basicProperties, messageBody);
             logger.LogDebug($"Sent message {JsonConvert.SerializeObject(message)}");
-            logger.LogInformation($"Sent a message with Correleation Id {message.CorrelationId}");
+            logger.LogInformation($"Sent a message with CorreleationId {message.CorrelationId}");
         }
     }
 

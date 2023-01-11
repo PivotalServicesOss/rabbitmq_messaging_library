@@ -163,7 +163,7 @@ public class Consumer<T> : IConsumer<T>
                       };
 
                       logger.LogDebug($"Received message {JsonConvert.SerializeObject(message)}");
-                      logger.LogInformation($"Received a message with Correleation Id {message.CorrelationId}");
+                      logger.LogInformation($"Received a message with CorreleationId {message.CorrelationId}");
 
                       MessageReceived?.Invoke(message);
                   }
