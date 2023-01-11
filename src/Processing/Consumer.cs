@@ -1,10 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Linq;
-using System;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
-using System.Collections.Generic;
 using RabbitMQ.Client.Events;
 using System.Text;
 

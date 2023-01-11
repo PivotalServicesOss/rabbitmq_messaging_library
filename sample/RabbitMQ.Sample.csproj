@@ -15,4 +15,9 @@
     <ProjectReference Include="..\src\Rabbit.Messaging.csproj" />
   </ItemGroup>
 
+  <Target Name="RemoveBases" AfterTargets="Clean">
+      <RemoveDir Directories="$(BaseOutputPath)" />
+      <RemoveDir Directories="$(BaseIntermediateOutputPath)" /> 
+  </Target>
+
 </Project>

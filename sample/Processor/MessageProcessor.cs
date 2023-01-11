@@ -1,31 +1,30 @@
-using Microsoft.AspNetCore.Mvc;
 using PivotalServices.RabbitMQ.Messaging;
 using Newtonsoft.Json;
 
 namespace RabbitMQ.Sample;
 
-[ApiController]
-[Route("[controller]")]
-public class MyMessageController : ControllerBase
+public class MessageProcessor : IHostedService
 {
-    private readonly ILogger<MyMessageController> logger;
-    private readonly IProducer<MyMessage> producer;
+    private readonly ILogger<MessageProcessor> logger;
     private readonly IConsumer<MyMessage> consumer;
 
-    public MyMessageController(ILogger<MyMessageController> logger, 
-                                IProducer<MyMessage> producer, 
+    public MessageProcessor(ILogger<MessageProcessor> logger, 
                                 IConsumer<MyMessage> consumer)
     {
         this.logger = logger;
-        this.producer = producer;
         this.consumer = consumer;
-        consumer.MessageReceived += Received;
     }
 
-    [HttpGet("send/{text}")]
-    public void Send(string text)
+     public Task StartAsync(CancellationToken cancellationToken)
     {
-        producer.Send(new OutboundMessage<MyMessage>() { Content = new MyMessage { SomeText = text } });
+        consumer.MessageReceived += Received;
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        consumer.MessageReceived -= Received;
+        return Task.CompletedTask;
     }
 
     private void Received(InboundMessage<MyMessage> message)

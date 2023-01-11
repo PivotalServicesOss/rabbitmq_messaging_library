@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PivotalServices.RabbitMQ.Messaging;
 
 namespace RabbitMQ.Sample;
@@ -12,9 +13,12 @@ public static class Program
         // Add services to the container.
 
         builder.Services.AddRabbitMQ(cfg => {
-            cfg.AddProducer<MyMessage>("my-exg2", "my-queue2");
-            cfg.AddConsumer<MyMessage>("my-exg2", "my-queue2");
+            cfg.AddProducer<MyMessage>("sample-ex", "queue-1");
+            cfg.AddConsumer<MyMessage>("sample-ex", "queue-1");
         });
+
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageProcessor>());
+        //builder.Services.AddHostedService<MessageProcessor>();
 
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

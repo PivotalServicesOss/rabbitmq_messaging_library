@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
