@@ -3,7 +3,7 @@ name: Nuget (Prod Release)
 on:
   push:
     branches:    
-      - main
+      - master
     
 jobs:
   build:
