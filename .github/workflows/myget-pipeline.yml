@@ -1,9 +1,10 @@
-name: Myget (Pre-Release)
+name: Myget Pipeline (Auto)
 
 on:
   push:
     branches:   
       - feature/**
+      
 jobs:
   build:
     runs-on: windows-latest  

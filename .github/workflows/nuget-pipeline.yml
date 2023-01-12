@@ -1,4 +1,4 @@
-name: Nuget (Prod Release)
+name: Nuget Pipeline
 
 on: 
   workflow_dispatch:
