@@ -88,7 +88,9 @@ public class Consumer<T> : Initializer<T>, IConsumer<T>
         if(!connection.IsOpen)
             return;
             
-        channel.BasicCancel(consumerTag);
+        if(consumerTag != null)
+            channel.BasicCancel(consumerTag);
+            
         channel.Close();
 
         if (connection != null && connection.IsOpen)
