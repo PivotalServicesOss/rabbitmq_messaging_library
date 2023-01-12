@@ -32,11 +32,9 @@ public class Consumer<T> : Initializer<T>, IConsumer<T>
 
     public Consumer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                     IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                    IOptionsMonitor<DlxQueueConfiguration> deadLetterQueueConfigurationOptions,
                     ILogger<Consumer<T>> logger)
             : base(serviceConfigurationOptions, 
                     queueConfigurationOptions,
-                    deadLetterQueueConfigurationOptions,
                     logger)
         
     {

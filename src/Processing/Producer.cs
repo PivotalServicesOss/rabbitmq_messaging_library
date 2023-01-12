@@ -24,11 +24,9 @@ public class Producer<T> : Initializer<T>, IProducer<T>
 
     public Producer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                     IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                    IOptionsMonitor<DlxQueueConfiguration> deadLetterQueueConfigurationOptions,
                     ILogger<Producer<T>> logger)
             : base(serviceConfigurationOptions, 
                     queueConfigurationOptions,
-                    deadLetterQueueConfigurationOptions,
                     logger)
         
     {

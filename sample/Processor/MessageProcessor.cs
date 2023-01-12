@@ -42,7 +42,10 @@ public class MessageProcessor : IHostedService
                 
                 //Do Processing of message content here
                 logger.LogInformation($"Received message content {JsonConvert.SerializeObject(message.Content)}");
-
+                
+                if(message.Content.SomeText == "reject")
+                    throw new Exception("force rejected");
+                    
                 consumer.Acknowledge(message);// you can also configure auto acknowledge if needed
 
                 logger.LogDebug($"Finished processing of message");
@@ -65,6 +68,9 @@ public class MessageProcessor : IHostedService
                 
                 //Do Processing of message content here
                 logger.LogInformation($"Received message2 content {JsonConvert.SerializeObject(message.Content)}");
+
+                if(message.Content.SomeText == "reject")
+                    throw new Exception("force rejected");
 
                 consumer2.Acknowledge(message);// you can also configure auto acknowledge if needed
 

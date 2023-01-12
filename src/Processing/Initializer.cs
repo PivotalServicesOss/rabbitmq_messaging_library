@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 
 namespace PivotalServices.RabbitMQ.Messaging;
@@ -9,7 +8,6 @@ public abstract class Initializer<T>
 {
     protected readonly IOptions<ServiceConfiguration> serviceConfigurationOptions;
     protected readonly QueueConfiguration queueConfiguration;
-    protected readonly DlxQueueConfiguration deadLetterQueueConfiguration;
     ILogger logger;
     protected IConnection connection;
     protected IModel channel;
@@ -20,16 +18,14 @@ public abstract class Initializer<T>
 
     public Initializer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                         IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                        IOptionsMonitor<DlxQueueConfiguration> deadLetterQueueConfigurationOptions,
                         ILogger logger)
     {
         var optionsName = typeof(T).Name;
         this.serviceConfigurationOptions = serviceConfigurationOptions;
         this.queueConfiguration = queueConfigurationOptions.Get(optionsName);
-        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null 
-                                            ? new List<string>() 
+        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null
+                                            ? new List<string>()
                                             : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
-        this.deadLetterQueueConfiguration = deadLetterQueueConfigurationOptions.Get(optionsName);
         this.logger = logger;
         Initialize();
     }
@@ -46,8 +42,7 @@ public abstract class Initializer<T>
         channel.ExchangeDeclare(exchange: exchangeName,
                                 type: queueConfiguration.ExchangeType);
 
-        if (!string.IsNullOrEmpty(deadLetterQueueConfiguration.ExchangeNamePrefix)
-            && !string.IsNullOrEmpty(deadLetterQueueConfiguration.QueueNamePrefix))
+        if (queueConfiguration.AddDlxq)
         {
             CreateDeadLetterExchange(properties);
         }
@@ -61,22 +56,13 @@ public abstract class Initializer<T>
                                          arguments: properties
                                          ).QueueName;
 
-        if (!routingKeysFromConfiguration.Any())
+
+        foreach (var routingKey in routingKeysFromConfiguration)
         {
             channel.QueueBind(queue: queueName,
                                 exchange: exchangeName,
-                                routingKey: string.Empty,
+                                routingKey: routingKey.Trim(),
                                 arguments: null);
-        }
-        else
-        {
-            foreach (var routingKey in routingKeysFromConfiguration)
-            {
-                channel.QueueBind(queue: queueName,
-                                    exchange: exchangeName,
-                                    routingKey: routingKey.Trim(),
-                                    arguments: null);
-            }
         }
 
         channel.BasicQos(0, queueConfiguration.PrefetchCount, false);
@@ -88,12 +74,12 @@ public abstract class Initializer<T>
 
     private void CreateDeadLetterExchange(Dictionary<string, object> properties)
     {
-        var dlxExchangeName = $"{deadLetterQueueConfiguration.ExchangeNamePrefix}-DLX";
-        var dlxQueueName = $"{deadLetterQueueConfiguration.QueueNamePrefix}-DLQ";
+        var dlxExchangeName = $"{queueConfiguration.ExchangeName}-DLX";
+        var dlxQueueName = $"{queueConfiguration.QueueName}-DLQ";
         var dlxProperties = new Dictionary<string, object>();
 
-        channel.ExchangeDeclare(exchange: dlxExchangeName, type: ExchangeType.Fanout);
-        dlxProperties["x-max-length"] = deadLetterQueueConfiguration.MaximumQueueLength;
+        channel.ExchangeDeclare(exchange: dlxExchangeName, type: ExchangeType.Direct);
+        dlxProperties["x-max-length"] = queueConfiguration.MaximumQueueLength;
         channel.QueueDeclare(queue: dlxQueueName,
                              durable: false,
                              exclusive: false,
@@ -101,8 +87,9 @@ public abstract class Initializer<T>
                              arguments: dlxProperties);
         channel.QueueBind(queue: dlxQueueName,
                           exchange: dlxExchangeName,
-                          routingKey: string.Empty,
+                          routingKey: dlxQueueName,
                           arguments: null);
+        properties["x-dead-letter-routing-key"] = dlxQueueName;
         properties["x-dead-letter-exchange"] = dlxExchangeName;
     }
 

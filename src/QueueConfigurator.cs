@@ -1,16 +1,17 @@
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
 public interface IQueueConfigurator
 {
-    void AddConsumer<T>(string exchangeName, string queueName, 
-                        Action<QueueConfiguration> configure = null, 
-                        Action<DlxQueueConfiguration> configureDlx = null);
-    void AddProducer<T>(string exchangeName, string queueName, 
-                        Action<QueueConfiguration> configure = null, 
-                        Action<DlxQueueConfiguration> configureDlx = null);
+    void AddConsumer<T>(string exchangeName,
+                        string queueName,
+                        bool addDlx = false,
+                        Action<QueueConfiguration> configure = null);
+    void AddProducer<T>(string exchangeName,
+                        string queueName,
+                        bool addDlx = false,
+                        Action<QueueConfiguration> configure = null);
 }
 
 public class QueueConfigurator : IQueueConfigurator
@@ -22,50 +23,44 @@ public class QueueConfigurator : IQueueConfigurator
         this.services = services;
     }
 
-    public void AddConsumer<T>(string exchangeName, string queueName, 
-                                Action<QueueConfiguration> configure = null, 
-                                Action<DlxQueueConfiguration> configureDlx = null)
+    public void AddConsumer<T>(string exchangeName,
+                               string queueName,
+                               bool addDlx = false,
+                               Action<QueueConfiguration> configure = null)
     {
         var optionsName = typeof(T).Name;
         services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
+            cfg.AddDlxq = addDlx;
         });
 
         if (configure != null)
         {
             services.PostConfigure<QueueConfiguration>(optionsName, configure);
-        }
-
-        if (configureDlx != null)
-        {
-            services.PostConfigure<DlxQueueConfiguration>(optionsName, configureDlx);
         }
 
         services.AddSingleton<IConsumer<T>,Consumer<T>>();
         Global.ConsumerTypes.Add(typeof(IConsumer<T>));
     }
 
-    public void AddProducer<T>(string exchangeName, string queueName, 
-                                Action<QueueConfiguration> configure = null,
-                                Action<DlxQueueConfiguration> configureDlx = null)
+    public void AddProducer<T>(string exchangeName,
+                               string queueName,
+                               bool addDlx = false,
+                               Action<QueueConfiguration> configure = null)
     {
         var optionsName = typeof(T).Name;
         services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
+            cfg.AddDlxq = addDlx;
         });
 
         if (configure != null)
         {
             services.PostConfigure<QueueConfiguration>(optionsName, configure);
-        }
-
-        if (configureDlx != null)
-        {
-            services.PostConfigure<DlxQueueConfiguration>(optionsName, configureDlx);
         }
 
         services.AddSingleton<IProducer<T>,Producer<T>>();
