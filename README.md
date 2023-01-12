@@ -6,7 +6,7 @@
 
 Build | PivotalServices.RabbitMQ.Messaging |
 --- | --- |
-[![Nuget (Prod Release)](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/actions/workflows/prod-release-pipeline.yml/badge.svg)](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/actions/workflows/prod-release-pipeline.yml) | [![NuGet](https://img.shields.io/nuget/v/PivotalServices.RabbitMQ.Messaging.svg?style=flat-square)](http://www.nuget.org/packages/PivotalServices.RabbitMQ.Messaging)
+[![Nuget (Prod Release)](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/actions/workflows/nuget-release-pipeline.yml/badge.svg)](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/actions/workflows/nuget-release-pipeline.yml) | [![NuGet](https://img.shields.io/nuget/v/PivotalServices.RabbitMQ.Messaging.svg?style=flat-square)](http://www.nuget.org/packages/PivotalServices.RabbitMQ.Messaging)
 
 ### Salient features
 - Simple RabbitMQ library which acts as a simple extension to RabbitMQ.Client library
