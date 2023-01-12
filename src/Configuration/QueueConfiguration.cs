@@ -2,7 +2,7 @@ namespace PivotalServices.RabbitMQ.Messaging;
 
 public class QueueConfiguration
 {
-    internal bool AddDlxq{ get; set; } = false;
+    internal bool AddDeadLetterQueue{ get; set; } = true;
     internal string ExchangeName { get; set; } = string.Empty;
     public string ExchangeType { get; set; } = "direct";
     internal string QueueName { get; set; } = string.Empty;

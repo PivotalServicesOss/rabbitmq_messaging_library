@@ -42,7 +42,7 @@ public abstract class Initializer<T>
         channel.ExchangeDeclare(exchange: exchangeName,
                                 type: queueConfiguration.ExchangeType);
 
-        if (queueConfiguration.AddDlxq)
+        if (queueConfiguration.AddDeadLetterQueue)
         {
             CreateDeadLetterExchange(properties);
         }

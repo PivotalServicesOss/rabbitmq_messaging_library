@@ -6,11 +6,11 @@ public interface IQueueConfigurator
 {
     void AddConsumer<T>(string exchangeName,
                         string queueName,
-                        bool addDlx = false,
+                        bool addDeadLetterQueue = true,
                         Action<QueueConfiguration> configure = null);
     void AddProducer<T>(string exchangeName,
                         string queueName,
-                        bool addDlx = false,
+                        bool addDeadLetterQueue = true,
                         Action<QueueConfiguration> configure = null);
 }
 
@@ -25,7 +25,7 @@ public class QueueConfigurator : IQueueConfigurator
 
     public void AddConsumer<T>(string exchangeName,
                                string queueName,
-                               bool addDlx = false,
+                               bool addDeadLetterQueue = true,
                                Action<QueueConfiguration> configure = null)
     {
         var optionsName = typeof(T).Name;
@@ -33,7 +33,7 @@ public class QueueConfigurator : IQueueConfigurator
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
-            cfg.AddDlxq = addDlx;
+            cfg.AddDeadLetterQueue = addDeadLetterQueue;
         });
 
         if (configure != null)
@@ -47,7 +47,7 @@ public class QueueConfigurator : IQueueConfigurator
 
     public void AddProducer<T>(string exchangeName,
                                string queueName,
-                               bool addDlx = false,
+                               bool addDeadLetterQueue = true,
                                Action<QueueConfiguration> configure = null)
     {
         var optionsName = typeof(T).Name;
@@ -55,7 +55,7 @@ public class QueueConfigurator : IQueueConfigurator
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
-            cfg.AddDlxq = addDlx;
+            cfg.AddDeadLetterQueue = addDeadLetterQueue;
         });
 
         if (configure != null)
