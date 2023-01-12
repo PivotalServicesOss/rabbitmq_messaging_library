@@ -47,7 +47,7 @@ task DevPack -depends DevBuild, Pack
 task DevPublish -depends DevPack, Push2Local
 task CiBuild -depends SetReleaseBuild, emitProperties, Clean, Restore, Compile, UnitTest
 task CiPack -depends CiBuild, Pack
-task CiPublish2Nuget -depends CiPack
+task CiPublish2Nuget -depends CiPack, Push2Nuget
 task CiPublish2Myget -depends CiPack, Push2Myget
 
 task SetDebugBuild {
