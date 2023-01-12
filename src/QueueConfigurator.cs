@@ -1,74 +1,69 @@
-
-using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
 public interface IQueueConfigurator
 {
-    void AddConsumer<T>(string exchangeName, string queueName, 
-                            Action<QueueConfiguration> configure = null, 
-                            Action<DlxQueueConfiguration> configureDlx = null);
-    void AddProducer<T>(string exchangeName, string queueName, 
-                            Action<QueueConfiguration> configure = null, 
-                            Action<DlxQueueConfiguration> configureDlx = null);
+    void AddConsumer<T>(string exchangeName,
+                        string queueName,
+                        bool addDeadLetterQueue = true,
+                        Action<QueueConfiguration> configure = null);
+    void AddProducer<T>(string exchangeName,
+                        string queueName,
+                        bool addDeadLetterQueue = true,
+                        Action<QueueConfiguration> configure = null);
 }
 
 public class QueueConfigurator : IQueueConfigurator
 {
-    private QueueConfiguration queueConfiguration;
     private readonly IServiceCollection services;
 
-    public QueueConfigurator(QueueConfiguration queueConfiguration, IServiceCollection services)
+    public QueueConfigurator(IServiceCollection services)
     {
-        this.queueConfiguration = queueConfiguration;
         this.services = services;
     }
 
-    public void AddConsumer<T>(string exchangeName, string queueName, 
-                                Action<QueueConfiguration> configure = null, 
-                                Action<DlxQueueConfiguration> configureDlx = null)
+    public void AddConsumer<T>(string exchangeName,
+                               string queueName,
+                               bool addDeadLetterQueue = true,
+                               Action<QueueConfiguration> configure = null)
     {
-        services.Configure<QueueConfiguration>(nameof(T), cfg =>
+        var optionsName = typeof(T).Name;
+        services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
+            cfg.AddDeadLetterQueue = addDeadLetterQueue;
         });
 
         if (configure != null)
         {
-            services.PostConfigure<QueueConfiguration>(nameof(T), configure);
-        }
-
-        if (configureDlx != null)
-        {
-            services.PostConfigure<DlxQueueConfiguration>(nameof(T), configureDlx);
+            services.PostConfigure<QueueConfiguration>(optionsName, configure);
         }
 
         services.AddSingleton<IConsumer<T>,Consumer<T>>();
         Global.ConsumerTypes.Add(typeof(IConsumer<T>));
     }
 
-    public void AddProducer<T>(string exchangeName, string queueName, 
-                                Action<QueueConfiguration> configure = null,
-                                Action<DlxQueueConfiguration> configureDlx = null)
+    public void AddProducer<T>(string exchangeName,
+                               string queueName,
+                               bool addDeadLetterQueue = true,
+                               Action<QueueConfiguration> configure = null)
     {
-        services.Configure<QueueConfiguration>(nameof(T), cfg =>
+        var optionsName = typeof(T).Name;
+        services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
             cfg.ExchangeName = exchangeName;
             cfg.QueueName = queueName;
+            cfg.AddDeadLetterQueue = addDeadLetterQueue;
         });
 
         if (configure != null)
         {
-            services.PostConfigure<QueueConfiguration>(nameof(T), configure);
-        }
-
-        if (configureDlx != null)
-        {
-            services.PostConfigure<DlxQueueConfiguration>(nameof(T), configureDlx);
+            services.PostConfigure<QueueConfiguration>(optionsName, configure);
         }
 
         services.AddSingleton<IProducer<T>,Producer<T>>();
+        Global.ProducerTypes.Add(typeof(IProducer<T>));
     }
 }

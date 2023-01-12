@@ -42,7 +42,12 @@ Build | PivotalServices.RabbitMQ.Messaging |
     using PivotalServices.RabbitMQ.Messaging;
     ...
     builder.Services.AddRabbitMQ(cfg => {
-        cfg.AddProducer<MyMessage>("exchange-name", "queue-name");
+        cfg.AddProducer<MyMessage>(exchangeName: "exchangeName",
+                                       queueName: "queueOneName",
+                                       addDeadLetterQueue: false);
+        
+        cfg.AddProducer<MyMessage2>(exchangeName: "exchangeName",
+                                        queueName: "queueTwoName");
     });
 ```
 - Use a producer as below. Below code is from a controller endpoint where the message is published
@@ -57,7 +62,15 @@ Build | PivotalServices.RabbitMQ.Messaging |
     [HttpGet("send/{text}")]
     public void Send(string text)
     {
-        producer.Send(new OutboundMessage<MyMessage>() { Content = new MyMessage { SomeText = text } });
+        var myMessage = new MyMessage { SomeText = text };
+        producer.Send(new OutboundMessage<MyMessage>(myMessage));
+    }
+
+    [HttpGet("send2/{text}")]
+    public void Send2(string text)
+    {
+        var myMessage2 = new MyMessage2 { SomeText = text };
+        producer2.Send(new OutboundMessage<MyMessage2>(myMessage2));
     }
 ```
 
@@ -69,11 +82,19 @@ Build | PivotalServices.RabbitMQ.Messaging |
     using PivotalServices.RabbitMQ.Messaging;
     ...
     builder.Services.AddRabbitMQ(cfg => {
-        cfg.AddConsumer<MyMessage>("exchange-name", "queue-name");
+        cfg.AddConsumer<MyMessage>(exchangeName: "exchangeName",
+                                       queueName: "queueOneName",
+                                       addDeadLetterQueue: false);
+
+        cfg.AddConsumer<MyMessage2>(exchangeName: "exchangeName",
+                                        queueName: "queueTwoName");
     });
 ```
 
-- To use a consumer, option 1 is to use a singleton hosted service as below
+> Important: Make sure the queue definitions and configurations are same between a consumer and a producer for a same queue, else you may get precondition failures while initializing
+
+
+- To use a consumer, one simple option is to use a singleton hosted service as below
 
 ```c#
     using PivotalServices.RabbitMQ.Messaging;
@@ -89,19 +110,37 @@ Build | PivotalServices.RabbitMQ.Messaging |
     public class MessageProcessor : IHostedService
     {
         private readonly IConsumer<MyMessage> consumer;
+        private readonly IConsumer<MyMessage2> consumer2;
 
-        public MessageProcessor(IConsumer<MyMessage> consumer)
+        public MessageProcessor(IConsumer<MyMessage> consumer,
+                                IConsumer<MyMessage2> consumer2)
         {
             this.consumer = consumer;
+            this.consumer2 = consumer2;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
             consumer.MessageReceived += Received;
+            consumer2.MessageReceived += Received2;
             return Task.CompletedTask;
         }
 
         private void Received(InboundMessage<MyMessage> message)
+        {
+            try
+            {
+                //Do Processing of message content here
+                consumer.Acknowledge(message);// you can also configure auto acknowledge if needed
+            }
+            catch (Exception exception)
+            {
+                consumer.Reject(message);
+                logger.LogError(exception, $"Failed processing message, so rejecting", message);
+            }
+        }
+
+        private void Received2(InboundMessage<MyMessage2> message)
         {
             try
             {
@@ -124,8 +163,10 @@ Build | PivotalServices.RabbitMQ.Messaging |
 - Use the below command, but make sure docker is already installed. You can use the official version as well including management options
 
 ```bash
-    docker run --publish 5672:5672 steeltoeoss/rabbitmq
+    docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management
 ```
+
+- Access the management UI at http://localhost:15672 with default user and password `guest`
 
 ### Contributions are welcome!
 
