@@ -17,34 +17,22 @@ public class MessageService : IHostedService
         this.lifetime = lifetime;
 
         //To handle gracefiul shutdown
-        lifetime.ApplicationStopping.Register(StopConsumption);
-    }
-
-    IList<object> GetAllConsumers()
-    {
-        var consumers = new List<object>();
-        
-        foreach (var consumerType in Global.ConsumerTypes)
-        {
-            var instance = this.provider.GetRequiredService(consumerType);
-            consumers.Add(instance);
-        }
-        return consumers;
+        lifetime.ApplicationStopping.Register(StopConsumerConsumptionAndCloseProducerConnections);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        StartConsumption();
+        StartConsumerConsumption();
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        StopConsumption();
+        StopConsumerConsumptionAndCloseProducerConnections();
         return Task.CompletedTask;
     }
 
-    private void StartConsumption()
+    private void StartConsumerConsumption()
     {
         lock (lockObj)
         {
@@ -60,7 +48,7 @@ public class MessageService : IHostedService
         }
     }
 
-    private void StopConsumption()
+    private void StopConsumerConsumptionAndCloseProducerConnections()
     {
         lock (lockObj)
         {
@@ -71,8 +59,38 @@ public class MessageService : IHostedService
                 {
                     consumer.StopConsumption();
                 }
+
+                var producers = GetAllProducers();
+                foreach (IProducer producer in producers)
+                {
+                    producer.Close();
+                }
                 stopped = true;
             }
         }
+    }
+
+    IList<object> GetAllConsumers()
+    {
+        var consumers = new List<object>();
+        
+        foreach (var consumerType in Global.ConsumerTypes)
+        {
+            var instance = this.provider.GetRequiredService(consumerType);
+            consumers.Add(instance);
+        }
+        return consumers;
+    }
+
+    IList<object> GetAllProducers()
+    {
+        var producers = new List<object>();
+        
+        foreach (var producerType in Global.ProducerTypes)
+        {
+            var instance = this.provider.GetRequiredService(producerType);
+            producers.Add(instance);
+        }
+        return producers;
     }
 }

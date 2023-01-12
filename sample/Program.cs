@@ -13,11 +13,17 @@ public static class Program
         // Add services to the container.
 
         builder.Services.AddRabbitMQ(cfg => {
-            cfg.AddProducer<MyMessage>("sample-ex", "queue-1");
-            cfg.AddProducer<MyMessage2>("sample-ex", "queue-2");
-            cfg.AddConsumer<MyMessage>("sample-ex", "queue-1");
-            cfg.AddConsumer<MyMessage2>("sample-ex", "queue-2");
+            cfg.AddProducer<MyMessage>(exchangeName: "test-ex", queueName: "queue-1");
+            cfg.AddProducer<MyMessage2>(exchangeName: "test-ex", queueName: "queue-2");
+
+            cfg.AddConsumer<MyMessage>(exchangeName: "test-ex", queueName: "queue-1");
+            cfg.AddConsumer<MyMessage2>(exchangeName: "test-ex", queueName: "queue-2");
         });
+
+        // configureDlx: dlxOptions => {
+        //             dlxOptions.ExchangeNamePrefix = "sample-ex";
+        //             dlxOptions.ExchangeNamePrefix = "queue-1";
+        //         });
 
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageProcessor>());
 

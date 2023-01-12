@@ -1,5 +1,4 @@
 
-using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace PivotalServices.RabbitMQ.Messaging;
@@ -7,11 +6,11 @@ namespace PivotalServices.RabbitMQ.Messaging;
 public interface IQueueConfigurator
 {
     void AddConsumer<T>(string exchangeName, string queueName, 
-                            Action<QueueConfiguration> configure = null, 
-                            Action<DlxQueueConfiguration> configureDlx = null);
+                        Action<QueueConfiguration> configure = null, 
+                        Action<DlxQueueConfiguration> configureDlx = null);
     void AddProducer<T>(string exchangeName, string queueName, 
-                            Action<QueueConfiguration> configure = null, 
-                            Action<DlxQueueConfiguration> configureDlx = null);
+                        Action<QueueConfiguration> configure = null, 
+                        Action<DlxQueueConfiguration> configureDlx = null);
 }
 
 public class QueueConfigurator : IQueueConfigurator
@@ -70,5 +69,6 @@ public class QueueConfigurator : IQueueConfigurator
         }
 
         services.AddSingleton<IProducer<T>,Producer<T>>();
+        Global.ProducerTypes.Add(typeof(IProducer<T>));
     }
 }
