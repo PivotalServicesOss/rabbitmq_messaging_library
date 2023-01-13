@@ -3,8 +3,6 @@ WORKDIR /app
 
 # Copy everything, restore, build and publish
 COPY . ./
-# COPY $HOME/.nugetrepo/PivotalServices.RabbitMQ.Messaging.* ./
-RUN --mount=type=bind,source="/Users/ajaganathan/.nugetrepo",target="/Users/ajaganathan/.nugetro"
 RUN dotnet publish ./RabbitMQ.Sample.csproj -c Release -o _publish
 
 # Build runtime image

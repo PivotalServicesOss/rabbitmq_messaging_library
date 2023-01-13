@@ -9,12 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageReference Include="PivotalServices.RabbitMQ.Messaging" Version="1.0.2-preview.3" />
+    <!-- <PackageReference Include="PivotalServices.RabbitMQ.Messaging" Version="1.0.2-preview.3" /> -->
   </ItemGroup>
 
-  <!-- <ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\src\Rabbit.Messaging.csproj" />
-  </ItemGroup> -->
+  </ItemGroup>
 
   <Target Name="RemoveBases" AfterTargets="Clean">
       <RemoveDir Directories="$(BaseOutputPath)" />

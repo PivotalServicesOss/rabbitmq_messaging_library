@@ -13,13 +13,13 @@ public static class Extensions
     {
         if (!services.Any(d => d.ImplementationType == typeof(MessageService)))
         {
-            AddHostedService(services, configuration);
+            ConfigureRabbitConnection(services, configuration);
             configure?.Invoke(new QueueConfigurator(services));
         }
         return services;
     }
 
-    static void AddHostedService(IServiceCollection services, IConfiguration configuration)
+    static void ConfigureRabbitConnection(IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions();
         services.Configure<ServiceConfiguration>(configuration.GetSection(ServiceConfiguration.ConfigRoot));
