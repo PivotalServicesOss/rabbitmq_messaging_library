@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
-public interface IQueueConfigurator
+public interface IConfigurator
 {
     void AddConsumer<T>(string exchangeName,
                         string queueName,
@@ -14,11 +14,11 @@ public interface IQueueConfigurator
                         Action<QueueConfiguration> configure = null);
 }
 
-public class QueueConfigurator : IQueueConfigurator
+public class Configurator : IConfigurator
 {
     private readonly IServiceCollection services;
 
-    public QueueConfigurator(IServiceCollection services)
+    public Configurator(IServiceCollection services)
     {
         this.services = services;
     }

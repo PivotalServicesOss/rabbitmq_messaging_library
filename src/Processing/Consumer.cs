@@ -22,13 +22,12 @@ public interface IConsumer<T> : IDisposable, IConsumer
     void Reject(InboundMessage<T> message);
 }
 
-public class Consumer<T> : Initializer<T>, IConsumer<T>
+public class Consumer<T> : Factory<T>, IConsumer<T>
 {
     ILogger<Consumer<T>> logger;
-    protected string consumerTag;
     public event MessageReceivedDelegate<T> MessageReceived;
     protected readonly static object locker = new object();
-    protected bool disposedValue = false;
+    protected bool disposedValue;
 
     public Consumer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                     IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
@@ -48,6 +47,8 @@ public class Consumer<T> : Initializer<T>, IConsumer<T>
 
     public void StartConsumption()
     {
+        InitializeConnection("Consumer");
+
         var consumer = CreateEventingConsumer();
 
         consumer.Received += (channel, eventArgs) =>
@@ -80,33 +81,22 @@ public class Consumer<T> : Initializer<T>, IConsumer<T>
 
         consumerTag = channel.BasicConsume(queueName, false, consumer);
 
-        logger.LogInformation($"Started Listening, Consumer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
+        logger.LogInformation($"Started Listening, Consumer[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
     }
 
     public void StopConsumption()
     {
-        if(!connection.IsOpen)
-            return;
-            
-        if(consumerTag != null)
-            channel.BasicCancel(consumerTag);
-            
-        channel.Close();
-
-        if (connection != null && connection.IsOpen)
-            connection.Close();
-
-        logger.LogInformation($"Stopped Listening, Consumer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
+        CloseConnection("Consumer");
     }
 
     public void Acknowledge(InboundMessage<T> message)
     {
-        channel.BasicAck(message.DeliveryTag, false);
+        channel?.BasicAck(message.DeliveryTag, false);
     }
 
     public void Reject(InboundMessage<T> message)
     {
-        channel.BasicReject(message.DeliveryTag, false);
+        channel?.BasicReject(message.DeliveryTag, false);
     }
 
     protected virtual void Dispose(bool disposing)

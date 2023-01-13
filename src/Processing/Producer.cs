@@ -16,19 +16,19 @@ public interface IProducer<T> : IProducer, IDisposable
     void Send(OutboundMessage<T> message);
 }
 
-public class Producer<T> : Initializer<T>, IProducer<T>
+public class Producer<T> : Factory<T>, IProducer<T>
 {
     ILogger<Producer<T>> logger;
-    protected bool disposedValue = false;
+    protected bool disposedValue;
     private bool isQueueBindingRequired;
 
     public Producer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                     IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
                     ILogger<Producer<T>> logger)
-            : base(serviceConfigurationOptions, 
+            : base(serviceConfigurationOptions,
                     queueConfigurationOptions,
                     logger)
-        
+
     {
         this.logger = logger;
         isQueueBindingRequired = queueConfiguration.ExchangeType != ExchangeType.Topic
@@ -37,12 +37,14 @@ public class Producer<T> : Initializer<T>, IProducer<T>
 
     public void Send(OutboundMessage<T> message)
     {
+        InitializeConnection("Producer");
+
         var serializedMessage = JsonConvert.SerializeObject(message.Content);
         var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
 
-        if(message.RouteKeys == null || !message.RouteKeys.Any())
+        if (message.RouteKeys == null || !message.RouteKeys.Any())
         {
-            if(routingKeysFromConfiguration.Any())
+            if (routingKeysFromConfiguration.Any())
             {
                 message.RouteKeys = routingKeysFromConfiguration.ToArray();
             }
@@ -71,15 +73,7 @@ public class Producer<T> : Initializer<T>, IProducer<T>
 
     public void Close()
     {
-        if(!connection.IsOpen)
-            return;
-
-        channel.Close();
-
-        if (connection != null && connection.IsOpen)
-            connection.Close();
-
-        logger.LogInformation($"Closed, Producer<{typeof(T).Name}> - {queueConfiguration.QueueName}");
+        CloseConnection("Producer");
     }
 
     protected virtual void Dispose(bool disposing)

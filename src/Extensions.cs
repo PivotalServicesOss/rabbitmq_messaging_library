@@ -9,12 +9,12 @@ public static class Extensions
 {
     public static IServiceCollection AddRabbitMQ(this IServiceCollection services,
                                                  IConfiguration configuration,
-                                                 Action<IQueueConfigurator> configure = null)
+                                                 Action<IConfigurator> configure = null)
     {
-        if (!services.Any(d => d.ImplementationType == typeof(MessageService)))
+        if (!services.Any(d => d.ImplementationType == typeof(Service)))
         {
             ConfigureRabbitConnection(services, configuration);
-            configure?.Invoke(new QueueConfigurator(services));
+            configure?.Invoke(new Configurator(services));
         }
         return services;
     }
@@ -23,6 +23,6 @@ public static class Extensions
     {
         services.AddOptions();
         services.Configure<ServiceConfiguration>(configuration.GetSection(ServiceConfiguration.ConfigRoot));
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageService>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, Service>());
     }
 }
