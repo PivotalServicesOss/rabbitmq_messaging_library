@@ -5,12 +5,10 @@ properties {
   $publish_dir = "$base_dir\publish-artifacts"
   $solution_file = "$base_dir\$solution_name.sln"
   $test_dir = "$base_dir\test"
-  $nuget = "nuget.exe"
   $local_nuget_repo = "/Users/ajaganathan/.nugetrepo"
   $remote_nuget_repo = "https://api.nuget.org/v3/index.json"
   $remote_myget_repo = "https://www.myget.org/F/pivotalservicesoss/api/v3/index.json"
   $date = Get-Date 
-  $dotnet_exe = get-dotnet
 }
 
 #These are aliases for other build tasks. They typically are named after the camelcase letters (rd = Rebuild Databases)
@@ -47,7 +45,7 @@ task DevPack -depends DevBuild, Pack
 task DevPublish -depends DevPack, Push2Local
 task CiBuild -depends SetReleaseBuild, emitProperties, Clean, Restore, Compile, UnitTest
 task CiPack -depends CiBuild, Pack
-task CiPublish2Nuget -depends CiPack
+task CiPublish2Nuget -depends CiPack, Push2Nuget
 task CiPublish2Myget -depends CiPack, Push2Myget
 
 task SetDebugBuild {
@@ -61,8 +59,7 @@ task SetReleaseBuild {
 task Restore {
     Write-Host "******************* Now restoring the solution dependencies *********************"
     exec { 
-        & $dotnet_exe msbuild /t:restore $solution_file /v:m /p:NuGetInteractive="true"
-        if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+        dotnet msbuild /t:restore $solution_file /v:m /p:NuGetInteractive="true"
     }
 }
 
@@ -72,117 +69,83 @@ task Clean {
         delete_directory $publish_dir
     }
     exec { 
-        & $dotnet_exe msbuild /t:clean /v:m /p:Configuration=$project_config $solution_file 
+        dotnet msbuild /t:clean /v:m /p:Configuration=$project_config $solution_file 
     }
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
 task Compile {
     Write-Host "******************* Now compiling the solution *********************"
     exec { 
-        & $dotnet_exe msbuild /t:build /v:m /p:Configuration=$project_config /nologo /p:Platform="Any CPU" /nologo $solution_file 
+        dotnet msbuild /t:build /v:m /p:Configuration=$project_config /nologo /p:Platform="Any CPU" /nologo $solution_file 
     }
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
 task UnitTest {
     Write-Host "******************* Now running unit tests *********************"
-    Push-Location $base_dir
-    $test_projects = @((Get-ChildItem -Recurse -Filter "*Unit.Test.csproj").FullName) -join '~'
+    $test_projects = @((Get-ChildItem -Recurse -Filter "*Unit.Test.csproj" -Path $base_dir).FullName) -join '~'
 
     foreach($test_project in $test_projects.Split("~"))
     {
         Write-Host "Executing tests on: $test_project"
         exec {
-            & $dotnet_exe test $test_project --settings "$base_dir/.runsettings" -- xunit.parallelizeTestCollections=true
+            dotnet test $test_project --settings "$base_dir/.runsettings" -- xunit.parallelizeTestCollections=true
         }
     }
-    Pop-Location
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
  }
 
  task IntegrationTest {
     Write-Host "******************* Now running IntegrationTest Tests *********************"
-    Push-Location $base_dir
-    $test_projects = @((Get-ChildItem -Recurse -Filter "*Integration.Test.csproj").FullName) -join '~'
+    $test_projects = @((Get-ChildItem -Recurse -Filter "*Integration.Test.csproj" -Path $base_dir).FullName) -join '~'
 
     foreach($test_project in $test_projects.Split("~"))
     {
         Write-Host "Executing tests on: $test_project"
         exec {
-            & $dotnet_exe test $test_project -- xunit.parallelizeTestCollections=false
+            dotnet test $test_project -- xunit.parallelizeTestCollections=false
         }
     }
-    Pop-Location
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
  }
 
  task Pack {
     Write-Host "******************* Now creating nuget package(s) *********************"
-	Push-Location $base_dir
-	$projects = @(Get-ChildItem -Recurse -Filter "*.csproj" | Where-Object {$_.Directory -like '*src*'}).FullName	
+	$projects = @(Get-ChildItem -Recurse -Filter "*.csproj" -Path $base_dir | Where-Object {$_.Directory -like '*src*'}).FullName	
 
 	foreach ($project in $projects) {
 		Write-Host "Executing nuget pack on the project: $project"
 		exec { 
-            & $dotnet_exe msbuild /t:pack /v:m $project /p:OutputPath=$publish_dir /p:Configuration=$project_config
-            if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+            dotnet msbuild /t:pack /v:m $project /p:OutputPath=$publish_dir /p:Configuration=$project_config
         }
 	}
-
-	Pop-Location
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
 task Push2Local {
     Write-Host "******************* Now pushing available nuget package(s) to $local_nuget_repo *********************"
-	Push-Location $base_dir
-	$packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" | Where-Object {$_.Directory -like "*publish-artifacts*"}).FullName
-	if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
-
+    $packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" -Path $publish_dir).FullName
 	foreach ($package in $packages) {
 		Write-Host "Executing nuget add for the package: $package"
-		exec { & $nuget add $package -Source $local_nuget_repo -Force}
-        if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
-        Write-Host "Warning: Possible overwrite of existing package $package, possible solution is to clear the cache(S)" -ForegroungColor Yellow
+		exec { dotnet nuget push $package --source $local_nuget_repo }
 	}
-
-	Pop-Location
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
 task Push2Nuget {
     Write-Host "******************* Now pushing available nuget package(s) to nuget.org *********************"
-	Push-Location $base_dir
-	$packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" | Where-Object {$_.Directory -like "*publish-artifacts*"}).FullName
-	if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+	$packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" -Path $publish_dir).FullName
 
 	foreach ($package in $packages) {
 		Write-Host "Executing nuget push for the package: $package"
-		exec { & $nuget push $package -Source $remote_nuget_repo -ApiKey $api_key}
-        if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+		exec { dotnet nuget push $package --source $remote_nuget_repo --api-key $api_key}
 	}
-
-	Pop-Location
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
 
 task Push2Myget {
     Write-Host "******************* Now pushing available nuget package(s) to myget.org *********************"
-	Push-Location $base_dir
-	$packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" | Where-Object {$_.Directory -like "*publish-artifacts*"}).FullName
-	if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+	$packages = @(Get-ChildItem -Recurse -Filter "*.nupkg" -Path $publish_dir).FullName
 
 	foreach ($package in $packages) {
 		Write-Host "Executing nuget push for the package: $package"
-		exec { & $nuget push $package -Source $remote_myget_repo -ApiKey $api_key}
-        if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+		exec { dotnet nuget push $package --source $remote_myget_repo --api-key $api_key}
 	}
-
-	Pop-Location
-    if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 }
-
 
 # -------------------------------------------------------------------------------------------------------------
 # generalized functions for Help Section
@@ -233,8 +196,4 @@ function global:delete_directory($directory_name)
 
 function global:delete_files($directory_name) {
     Get-ChildItem -Path $directory_name -Include * -File -Recurse | foreach { $_.Delete()}
-}
-
-function global:get-dotnet(){
-	return (Get-Command dotnet).Path
 }

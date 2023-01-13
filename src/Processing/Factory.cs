@@ -4,7 +4,7 @@ using RabbitMQ.Client;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
-public abstract class Initializer<T>
+public abstract class Factory<T>
 {
     protected readonly IOptions<ServiceConfiguration> serviceConfigurationOptions;
     protected readonly QueueConfiguration queueConfiguration;
@@ -15,8 +15,10 @@ public abstract class Initializer<T>
     protected IBasicProperties basicProperties;
     protected List<string> routingKeysFromConfiguration;
     protected string queueName;
+    protected string consumerTag;
+    protected bool isInitialized;
 
-    public Initializer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
+    public Factory(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                         IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
                         ILogger logger)
     {
@@ -27,11 +29,14 @@ public abstract class Initializer<T>
                                             ? new List<string>()
                                             : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
         this.logger = logger;
-        Initialize();
     }
 
-    private void Initialize()
+    protected void InitializeConnection(string name)
     {
+        if(isInitialized)
+            return;
+            
+        logger.LogInformation($"Initializing, {name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
         factory = CreateConnectionFactory();
         connection = factory.CreateConnection();
         channel = connection.CreateModel();
@@ -70,6 +75,7 @@ public abstract class Initializer<T>
         basicProperties = channel.CreateBasicProperties();
         basicProperties.Expiration = (queueConfiguration.MessageExpirationInSeconds * 1000).ToString();
         basicProperties.Persistent = queueConfiguration.IsPersistent;
+        isInitialized = true;
     }
 
     private void CreateDeadLetterExchange(Dictionary<string, object> properties)
@@ -103,5 +109,23 @@ public abstract class Initializer<T>
             Password = serviceConfigurationOptions.Value.Password,
             AutomaticRecoveryEnabled = true,
         };
+    }
+
+    protected void CloseConnection(string name)
+    {
+        if(!isInitialized
+            || connection == null
+            || !connection.IsOpen)
+            return;
+
+        if(consumerTag != null)
+            channel?.BasicCancel(consumerTag);
+
+        channel?.Close();
+
+        if (connection.IsOpen)
+            connection.Close();
+
+        logger.LogInformation($"Stopped, {name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
     }
 }

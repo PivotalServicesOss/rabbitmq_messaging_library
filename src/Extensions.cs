@@ -1,5 +1,4 @@
-using System;
-using System.Linq;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -8,20 +7,22 @@ namespace PivotalServices.RabbitMQ.Messaging;
 
 public static class Extensions
 {
-    public static IServiceCollection AddRabbitMQ(this IServiceCollection services, Action<IQueueConfigurator> configure = null)
+    public static IServiceCollection AddRabbitMQ(this IServiceCollection services,
+                                                 IConfiguration configuration,
+                                                 Action<IConfigurator> configure = null)
     {
-        if (!services.Any(d => d.ImplementationType == typeof(MessageService)))
+        if (!services.Any(d => d.ImplementationType == typeof(Service)))
         {
-            AddHostedService(services);
-            configure?.Invoke(new QueueConfigurator(services));
+            ConfigureRabbitConnection(services, configuration);
+            configure?.Invoke(new Configurator(services));
         }
         return services;
     }
 
-    static void AddHostedService(IServiceCollection services)
+    static void ConfigureRabbitConnection(IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions();
-        services.AddOptions<ServiceConfiguration>(ServiceConfiguration.ConfigRoot);
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageService>());
+        services.Configure<ServiceConfiguration>(configuration.GetSection(ServiceConfiguration.ConfigRoot));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, Service>());
     }
 }
