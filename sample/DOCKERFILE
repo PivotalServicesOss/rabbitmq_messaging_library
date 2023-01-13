@@ -1,0 +1,14 @@
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
+WORKDIR /app
+
+# Copy everything, restore, build and publish
+COPY . ./
+# COPY $HOME/.nugetrepo/PivotalServices.RabbitMQ.Messaging.* ./
+RUN --mount=type=bind,source="/Users/ajaganathan/.nugetrepo",target="/Users/ajaganathan/.nugetro"
+RUN dotnet publish ./RabbitMQ.Sample.csproj -c Release -o _publish
+
+# Build runtime image
+FROM mcr.microsoft.com/dotnet/sdk:6.0
+WORKDIR /app
+COPY --from=build-env /app/_publish .
+ENTRYPOINT ["dotnet", "RabbitMQ.Sample.dll"]

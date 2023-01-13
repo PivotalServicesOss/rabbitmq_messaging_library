@@ -14,7 +14,7 @@ public static class Program
 
         // Configure RabbitMQ
         // Important: Make sure the queue definitions and configurations are same between a consumer and a producer for a same queue
-        builder.Services.AddRabbitMQ(cfg => {
+        builder.Services.AddRabbitMQ(builder.Configuration, cfg => {
             var exchangeName = "sample";
             var queueOneName = "queue.1";
             var queueTwoName = "queue.2";
