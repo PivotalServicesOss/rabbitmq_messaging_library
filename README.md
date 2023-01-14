@@ -14,7 +14,9 @@ Build | PivotalServices.RabbitMQ.Messaging |
 ### Package
 - Extensions package - [PivotalServices.RabbitMQ.Messaging](https://www.nuget.org/packages/PivotalServices.RabbitMQ.Messaging)
 
-### Usage Instructions
+### Getting Started
+- Minimal understanding of use of a message broker. Refer [RabbitMQ Tutorial](https://www.rabbitmq.com/getstarted.html) for better understanding.
+
 - Install package [PivotalServices.RabbitMQ.Messaging](https://www.nuget.org/packages/PivotalServices.RabbitMQ.Messaging)
 
 #### Connecting to RabbitMQ
@@ -32,7 +34,7 @@ Build | PivotalServices.RabbitMQ.Messaging |
     }
 ```
 
-- If not provided, the default values `HostName='localhost', Vhost='/', Username='guest' and Password='guest'` will be used.
+- If not provided, the default values will be used. Please refer [here](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/blob/master/src/Configuration/ServiceConfiguration.cs) for the defaults.
 
 #### For adding a publisher/producer of messages
 
@@ -43,14 +45,29 @@ Build | PivotalServices.RabbitMQ.Messaging |
     ...
     builder.Services.AddRabbitMQ(cfg => {
         cfg.AddProducer<MyMessage>(exchangeName: "exchangeName",
-                                       queueName: "queueOneName",
-                                       addDeadLetterQueue: false);
-        
-        cfg.AddProducer<MyMessage2>(exchangeName: "exchangeName",
-                                        queueName: "queueTwoName");
+                                       queueName: "queueOneName");
     });
 ```
-- Use a producer as below. Below code is from a controller endpoint where the message is published
+
+- Optionally, you can add optional parameter to control the creation of a DLX, and also configure the queue and exchange properties as below.
+
+```c#
+    using PivotalServices.RabbitMQ.Messaging;
+    ...
+    builder.Services.AddRabbitMQ(cfg => {
+        cfg.AddProducer<MyMessage>(exchangeName: "exchangeName",
+                                       queueName: "queueOneName",
+                                       addDeadLetterQueue: false,
+                                       options => {
+                                            options.MessageExpirationInSeconds = 0;
+                                            options.MaximumQueueLength = 1000;
+                                       });
+    });
+```
+
+- Please refer [here](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/blob/master/src/Configuration/QueueConfiguration.cs) for the defaults and all possible configurations available.
+
+- Below code is from a controller endpoint where the message is published using the producer we configured just above.
 
 ```c#
     using PivotalServices.RabbitMQ.Messaging;
@@ -59,18 +76,11 @@ Build | PivotalServices.RabbitMQ.Messaging |
     {
         this.producer = producer;
     }
-    [HttpGet("send/{text}")]
+    [HttpPost("send")]
     public void Send(string text)
     {
         var myMessage = new MyMessage { SomeText = text };
         producer.Send(new OutboundMessage<MyMessage>(myMessage));
-    }
-
-    [HttpGet("send2/{text}")]
-    public void Send2(string text)
-    {
-        var myMessage2 = new MyMessage2 { SomeText = text };
-        producer2.Send(new OutboundMessage<MyMessage2>(myMessage2));
     }
 ```
 
@@ -83,78 +93,54 @@ Build | PivotalServices.RabbitMQ.Messaging |
     ...
     builder.Services.AddRabbitMQ(cfg => {
         cfg.AddConsumer<MyMessage>(exchangeName: "exchangeName",
-                                       queueName: "queueOneName",
-                                       addDeadLetterQueue: false);
-
-        cfg.AddConsumer<MyMessage2>(exchangeName: "exchangeName",
-                                        queueName: "queueTwoName");
+                                       queueName: "queueOneName");
     });
 ```
 
-> Important: Make sure the queue definitions and configurations are same between a consumer and a producer for a same queue, else you may get precondition failures while initializing
-
-
-- To use a consumer, one simple option is to use a singleton hosted service as below
+- Optionally, you can add optional parameter to control the creation of a DLX, and also configure the queue and exchange properties as below.
 
 ```c#
     using PivotalServices.RabbitMQ.Messaging;
     ...
-    builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageProcessor>());
+    builder.Services.AddRabbitMQ(cfg => {
+        cfg.AddConsumer<MyMessage>(exchangeName: "exchangeName",
+                                       queueName: "queueOneName",
+                                       addDeadLetterQueue: false,
+                                       options => {
+                                            options.MessageExpirationInSeconds = 0;
+                                            options.MaximumQueueLength = 1000;
+                                       });
+    });
 ```
 
-- And the hosted service is as below which process the consumed message
+- Please refer [here](https://github.com/PivotalServicesOss/rabbitmq_messaging_library/blob/master/src/Configuration/QueueConfiguration.cs) for the defaults and all possible configurations available.
+
+> Important Note: Make sure the queue definitions and configurations are exactly same between a consumer and a producer for a same queue, else you may get precondition failures while initializing the connection to the message broker
+
+- Now that we have configured a consumer `IConsumer<MyMessage>`, the consumer will start listening to the queues for incomming messages, when the application starts.
+
+- And finally, we need to subscribe to `MessageReceived` event of the consumer to consume and process the message, as below
 
 ```c#
-    using PivotalServices.RabbitMQ.Messaging;
-    ...
-    public class MessageProcessor : IHostedService
+    consumer.MessageReceived += (InboundMessage<MyMessage> message) =>
     {
-        private readonly IConsumer<MyMessage> consumer;
-        private readonly IConsumer<MyMessage2> consumer2;
-
-        public MessageProcessor(IConsumer<MyMessage> consumer,
-                                IConsumer<MyMessage2> consumer2)
+        try
         {
-            this.consumer = consumer;
-            this.consumer2 = consumer2;
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            consumer.MessageReceived += Received;
-            consumer2.MessageReceived += Received2;
-            return Task.CompletedTask;
-        }
-
-        private void Received(InboundMessage<MyMessage> message)
-        {
-            try
+            using (logger.BeginScope($"{message.CorrelationId}"))
             {
-                //Do Processing of message content here
-                consumer.Acknowledge(message);// you can also configure auto acknowledge if needed
-            }
-            catch (Exception exception)
-            {
-                consumer.Reject(message);
-                logger.LogError(exception, $"Failed processing message, so rejecting", message);
+                // Process the message here
+
+                consumer.Acknowledge(message);
             }
         }
-
-        private void Received2(InboundMessage<MyMessage2> message)
+        catch
         {
-            try
-            {
-                //Do Processing of message content here
-                consumer.Acknowledge(message);// you can also configure auto acknowledge if needed
-            }
-            catch (Exception exception)
-            {
-                consumer.Reject(message);
-                logger.LogError(exception, $"Failed processing message, so rejecting", message);
-            }
+            consumer.Reject(message);
         }
-    }
+    };
 ```
+
+- In the above code, we can see that if the message is processed successfully, we acknowledge, else we reject. The rejected message ends up in DLX if configured.
 
 - For more details, please refer to the sample project
 
