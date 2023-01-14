@@ -4,7 +4,7 @@ using RabbitMQ.Client;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
-public interface IConnectionBuilder<T>
+public interface IConnectionBuilder<T> : IDisposable
 {
     IModel CurrentChannel { get; }
     string CurrentQueueName { get; }
@@ -12,12 +12,13 @@ public interface IConnectionBuilder<T>
     IBasicProperties CurrentBasicProperties { get; }
     string CurrentExchangeName { get; }
     List<string> CurrentRoutingKeys { get; }
-    void InitializeConnection(IProcessor<T> processor);
-    void CloseConnection(IProcessor<T> processor);
+    void InitializeConnection();
+    void CloseConnection();
 }
 
 public class ConnectionBuilder<T> : IConnectionBuilder<T>
 {
+    protected readonly static object locker = new object();
     private readonly IOptions<ServiceConfiguration> serviceConfigurationOptions;
     private readonly IOptionsMonitor<QueueConfiguration> queueConfigurationOptions;
     private readonly ILogger<ConnectionBuilder<T>> logger;
@@ -32,10 +33,11 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
     public string CurrentQueueName => queueName;
     public string CurrentExchangeType => queueConfiguration.ExchangeType;
     public IBasicProperties CurrentBasicProperties => basicProperties;
-    public string CurrentExchangeName => queueConfiguration.ExchangeType;
+    public string CurrentExchangeName => queueConfiguration.ExchangeName;
     public List<string> CurrentRoutingKeys => routingKeysFromConfiguration;
-
     private bool isInitialized;
+    private bool isClosed;
+    protected bool isDisposed;
 
     public ConnectionBuilder(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                         IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
@@ -46,73 +48,88 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
         this.logger = logger;
     }
 
-    public void InitializeConnection(IProcessor<T> processor)
+    public void InitializeConnection()
     {
-        if(isInitialized)
-            return;
-        
-        //logger.LogInformation($"Initializing, {processor.GetType().Name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
-
-        var optionsName = typeof(T).Name;
-        queueConfiguration = queueConfigurationOptions.Get(optionsName);
-        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null
-                                            ? new List<string>()
-                                            : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
-
-        factory = CreateConnectionFactory();
-        connection = factory.CreateConnection();
-        channel = connection.CreateModel();
-
-        var exchangeName = queueConfiguration.ExchangeName;
-        var properties = new Dictionary<string, object>();
-
-        channel.ExchangeDeclare(exchange: exchangeName,
-                                type: queueConfiguration.ExchangeType);
-
-        if (queueConfiguration.AddDeadLetterQueue)
+        lock (locker)
         {
-            CreateDeadLetterExchange(properties);
+            if (isInitialized)
+                return;
+
+            var optionsName = typeof(T).Name;
+            queueConfiguration = queueConfigurationOptions.Get(optionsName);
+
+            logger.LogInformation("Initializing connection to Queue[{queue}], Exchange[{exchange}], for Message[{message}]",
+                                        queueConfiguration.QueueName,
+                                        queueConfiguration.ExchangeName,
+                                        typeof(T).Name);
+
+            routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null
+                                                ? new List<string>()
+                                                : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
+
+            factory = CreateConnectionFactory();
+            connection = factory.CreateConnection();
+            channel = connection.CreateModel();
+
+            var exchangeName = queueConfiguration.ExchangeName;
+            var properties = new Dictionary<string, object>();
+
+            channel.ExchangeDeclare(exchange: exchangeName,
+                                    type: queueConfiguration.ExchangeType);
+
+            if (queueConfiguration.AddDeadLetterQueue)
+            {
+                CreateDeadLetterExchange(properties);
+            }
+
+            properties["x-max-length"] = queueConfiguration.MaximumQueueLength;
+            properties["x-max-priority"] = queueConfiguration.MaxPriority;
+            queueName = channel.QueueDeclare(queue: queueConfiguration.QueueName,
+                                             durable: queueConfiguration.IsDurable,
+                                             exclusive: queueConfiguration.IsExclusive,
+                                             autoDelete: queueConfiguration.AutoDelete,
+                                             arguments: properties
+                                             ).QueueName;
+
+
+            foreach (var routingKey in routingKeysFromConfiguration)
+            {
+                channel.QueueBind(queue: queueName,
+                                    exchange: exchangeName,
+                                    routingKey: routingKey.Trim(),
+                                    arguments: null);
+            }
+
+            channel.BasicQos(0, queueConfiguration.PrefetchCount, false);
+
+            basicProperties = channel.CreateBasicProperties();
+            basicProperties.Expiration = (queueConfiguration.MessageExpirationInSeconds * 1000).ToString();
+            basicProperties.Persistent = queueConfiguration.IsPersistent;
+            isInitialized = true;
         }
-
-        properties["x-max-length"] = queueConfiguration.MaximumQueueLength;
-        properties["x-max-priority"] = queueConfiguration.MaxPriority;
-        queueName = channel.QueueDeclare(queue: queueConfiguration.QueueName,
-                                         durable: queueConfiguration.IsDurable,
-                                         exclusive: queueConfiguration.IsExclusive,
-                                         autoDelete: queueConfiguration.AutoDelete,
-                                         arguments: properties
-                                         ).QueueName;
-
-
-        foreach (var routingKey in routingKeysFromConfiguration)
-        {
-            channel.QueueBind(queue: queueName,
-                                exchange: exchangeName,
-                                routingKey: routingKey.Trim(),
-                                arguments: null);
-        }
-
-        channel.BasicQos(0, queueConfiguration.PrefetchCount, false);
-
-        basicProperties = channel.CreateBasicProperties();
-        basicProperties.Expiration = (queueConfiguration.MessageExpirationInSeconds * 1000).ToString();
-        basicProperties.Persistent = queueConfiguration.IsPersistent;
-        isInitialized = true;
     }
 
-    public void CloseConnection(IProcessor<T> processor)
+    public void CloseConnection()
     {
-        if(!isInitialized
-            || connection == null
-            || !connection.IsOpen)
-            return;
+        lock (locker)
+        {
+            if (isClosed 
+                || !isInitialized
+                || connection == null
+                || !connection.IsOpen)
+                return;
 
-        channel?.Close();
+            channel?.Close();
 
-        if (connection.IsOpen)
-            connection.Close();
+            if (connection.IsOpen)
+                connection.Close();
 
-        logger.LogInformation($"Stopped, {processor.GetType().Name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
+            logger.LogInformation("Closed connection to Queue[{queue}], Exchange[{exchange}], for Message[{message}]",
+                                        queueConfiguration.QueueName,
+                                        queueConfiguration.ExchangeName,
+                                        typeof(T).Name);
+            isClosed = true;
+        }
     }
 
     private void CreateDeadLetterExchange(Dictionary<string, object> properties)
@@ -146,5 +163,22 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
             Password = serviceConfigurationOptions.Value.Password,
             AutomaticRecoveryEnabled = true,
         };
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!isDisposed)
+        {
+            if (disposing)
+                CloseConnection();
+
+            isDisposed = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

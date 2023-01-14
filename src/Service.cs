@@ -27,7 +27,7 @@ public class Service : IHostedService
         this.logger = logger;
 
         //To handle gracefiul shutdown
-        lifetime.ApplicationStopping.Register(StopConsumerConsumptionAndCloseProducerConnections);
+        lifetime.ApplicationStopping.Register(StopConsumerConsumption);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -53,7 +53,7 @@ public class Service : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        StopConsumerConsumptionAndCloseProducerConnections();
+        StopConsumerConsumption();
         return Task.CompletedTask;
     }
 
@@ -73,7 +73,7 @@ public class Service : IHostedService
         }
     }
 
-    private void StopConsumerConsumptionAndCloseProducerConnections()
+    private void StopConsumerConsumption()
     {
         lock (lockObj)
         {
@@ -83,12 +83,6 @@ public class Service : IHostedService
                 foreach (IConsumer consumer in consumers)
                 {
                     consumer.StopConsumption();
-                }
-
-                var producers = GetAllProducers();
-                foreach (IProducer producer in producers)
-                {
-                    producer.Close();
                 }
                 stopped = true;
             }
@@ -105,17 +99,5 @@ public class Service : IHostedService
             consumers.Add(instance);
         }
         return consumers;
-    }
-
-    IList<object> GetAllProducers()
-    {
-        var producers = new List<object>();
-
-        foreach (var producerType in Global.ProducerTypes)
-        {
-            var instance = this.provider.GetRequiredService(producerType);
-            producers.Add(instance);
-        }
-        return producers;
     }
 }

@@ -66,6 +66,5 @@ public class Configurator : IConfigurator
 
         services.AddSingleton<IConnectionBuilder<T>, ConnectionBuilder<T>>();
         services.AddSingleton<IProducer<T>, Producer<T>>();
-        Global.ProducerTypes.Add(typeof(IProducer<T>));
     }
 }

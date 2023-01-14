@@ -5,12 +5,7 @@ using System.Text;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
-public interface IProducer
-{
-    void Close();
-}
-
-public interface IProducer<T> : IProcessor<T>, IProducer, IDisposable
+public interface IProducer<T> : IProcessor<T>
 {
     void Send(OutboundMessage<T> message);  
 }
@@ -19,7 +14,6 @@ public class Producer<T> : IProducer<T>
 {
     private readonly IConnectionBuilder<T> connectionBuilder;
     private readonly ILogger<Producer<T>> logger;
-    private bool disposedValue;
     private bool isQueueBindingRequired;
 
 
@@ -31,7 +25,12 @@ public class Producer<T> : IProducer<T>
 
     public void Send(OutboundMessage<T> message)
     {
-        connectionBuilder.InitializeConnection(this);
+        connectionBuilder.InitializeConnection();
+        logger.LogInformation("Sending Message[{message}] from Queue[{queue}], Exchange[{exchange}], CorrelationId: {correlation}",
+                                typeof(T).Name,
+                                connectionBuilder.CurrentQueueName,
+                                connectionBuilder.CurrentExchangeName,
+                                message.CorrelationId);
 
         isQueueBindingRequired = connectionBuilder.CurrentExchangeType != ExchangeType.Topic
                                     && connectionBuilder.CurrentExchangeType != ExchangeType.Fanout;
@@ -59,34 +58,17 @@ public class Producer<T> : IProducer<T>
         {
             if (isQueueBindingRequired)
             {
-                connectionBuilder.CurrentChannel.QueueBind(connectionBuilder.CurrentQueueName, connectionBuilder.CurrentExchangeName, routingKey.Trim(), null);
+                connectionBuilder.CurrentChannel.QueueBind(connectionBuilder.CurrentQueueName,
+                                                           connectionBuilder.CurrentExchangeName,
+                                                           routingKey.Trim(),
+                                                           null);
             }
 
-            connectionBuilder.CurrentChannel.BasicPublish(connectionBuilder.CurrentExchangeName, routingKey.Trim(), connectionBuilder.CurrentBasicProperties, messageBody);
-            logger.LogDebug($"Sent message {JsonConvert.SerializeObject(message)}");
-            logger.LogInformation($"Sent a message with CorreleationId {message.CorrelationId}");
+            connectionBuilder.CurrentChannel.BasicPublish(connectionBuilder.CurrentExchangeName,
+                                                          routingKey.Trim(),
+                                                          connectionBuilder.CurrentBasicProperties,
+                                                          messageBody);
+            logger.LogDebug($"Sent, {JsonConvert.SerializeObject(message)}");
         }
-    }
-
-    public void Close()
-    {
-        connectionBuilder.CloseConnection(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposedValue)
-        {
-            if (disposing)
-                Close();
-
-            disposedValue = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 }
