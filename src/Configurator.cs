@@ -41,7 +41,8 @@ public class Configurator : IConfigurator
             services.PostConfigure<QueueConfiguration>(optionsName, configure);
         }
 
-        services.AddSingleton<IConsumer<T>,Consumer<T>>();
+        services.AddSingleton<IConnectionBuilder<T>, ConnectionBuilder<T>>();
+        services.AddSingleton<IConsumer<T>, Consumer<T>>();
         Global.ConsumerTypes.Add(typeof(IConsumer<T>));
     }
 
@@ -63,7 +64,8 @@ public class Configurator : IConfigurator
             services.PostConfigure<QueueConfiguration>(optionsName, configure);
         }
 
-        services.AddSingleton<IProducer<T>,Producer<T>>();
+        services.AddSingleton<IConnectionBuilder<T>, ConnectionBuilder<T>>();
+        services.AddSingleton<IProducer<T>, Producer<T>>();
         Global.ProducerTypes.Add(typeof(IProducer<T>));
     }
 }

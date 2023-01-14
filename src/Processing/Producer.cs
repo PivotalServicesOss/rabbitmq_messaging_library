@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using System.Text;
@@ -11,61 +10,59 @@ public interface IProducer
     void Close();
 }
 
-public interface IProducer<T> : IProducer, IDisposable
+public interface IProducer<T> : IProcessor<T>, IProducer, IDisposable
 {
-    void Send(OutboundMessage<T> message);
+    void Send(OutboundMessage<T> message);  
 }
 
-public class Producer<T> : Factory<T>, IProducer<T>
+public class Producer<T> : IProducer<T>
 {
-    ILogger<Producer<T>> logger;
-    protected bool disposedValue;
+    private readonly IConnectionBuilder<T> connectionBuilder;
+    private readonly ILogger<Producer<T>> logger;
+    private bool disposedValue;
     private bool isQueueBindingRequired;
 
-    public Producer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
-                    IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                    ILogger<Producer<T>> logger)
-            : base(serviceConfigurationOptions,
-                    queueConfigurationOptions,
-                    logger)
 
+    public Producer(IConnectionBuilder<T> connectionBuilder, ILogger<Producer<T>> logger)
     {
+        this.connectionBuilder = connectionBuilder;
         this.logger = logger;
-        isQueueBindingRequired = queueConfiguration.ExchangeType != ExchangeType.Topic
-                                    && queueConfiguration.ExchangeType != ExchangeType.Fanout;
     }
 
     public void Send(OutboundMessage<T> message)
     {
-        InitializeConnection("Producer");
+        connectionBuilder.InitializeConnection(this);
+
+        isQueueBindingRequired = connectionBuilder.CurrentExchangeType != ExchangeType.Topic
+                                    && connectionBuilder.CurrentExchangeType != ExchangeType.Fanout;
 
         var serializedMessage = JsonConvert.SerializeObject(message.Content);
         var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
 
         if (message.RouteKeys == null || !message.RouteKeys.Any())
         {
-            if (routingKeysFromConfiguration.Any())
+            if (connectionBuilder.CurrentRoutingKeys.Any())
             {
-                message.RouteKeys = routingKeysFromConfiguration.ToArray();
+                message.RouteKeys = connectionBuilder.CurrentRoutingKeys.ToArray();
             }
             else
             {
-                message.RouteKeys = new[] { queueName };
+                message.RouteKeys = new[] { connectionBuilder.CurrentQueueName };
             }
         }
 
-        basicProperties.CorrelationId = message.CorrelationId;
-        basicProperties.ReplyTo = message.ReplyTo;
-        basicProperties.Priority = Convert.ToByte(message.Priority);
+        connectionBuilder.CurrentBasicProperties.CorrelationId = message.CorrelationId;
+        connectionBuilder.CurrentBasicProperties.ReplyTo = message.ReplyTo;
+        connectionBuilder.CurrentBasicProperties.Priority = Convert.ToByte(message.Priority);
 
         foreach (var routingKey in message.RouteKeys)
         {
             if (isQueueBindingRequired)
             {
-                channel.QueueBind(queueName, queueConfiguration.ExchangeName, routingKey.Trim(), null);
+                connectionBuilder.CurrentChannel.QueueBind(connectionBuilder.CurrentQueueName, connectionBuilder.CurrentExchangeName, routingKey.Trim(), null);
             }
 
-            channel.BasicPublish(queueConfiguration.ExchangeName, routingKey.Trim(), basicProperties, messageBody);
+            connectionBuilder.CurrentChannel.BasicPublish(connectionBuilder.CurrentExchangeName, routingKey.Trim(), connectionBuilder.CurrentBasicProperties, messageBody);
             logger.LogDebug($"Sent message {JsonConvert.SerializeObject(message)}");
             logger.LogInformation($"Sent a message with CorreleationId {message.CorrelationId}");
         }
@@ -73,7 +70,7 @@ public class Producer<T> : Factory<T>, IProducer<T>
 
     public void Close()
     {
-        CloseConnection("Producer");
+        connectionBuilder.CloseConnection(this);
     }
 
     protected virtual void Dispose(bool disposing)

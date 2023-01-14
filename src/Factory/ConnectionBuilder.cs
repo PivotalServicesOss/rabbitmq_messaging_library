@@ -4,39 +4,61 @@ using RabbitMQ.Client;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
-public abstract class Factory<T>
+public interface IConnectionBuilder<T>
 {
-    protected readonly IOptions<ServiceConfiguration> serviceConfigurationOptions;
-    protected readonly QueueConfiguration queueConfiguration;
-    ILogger logger;
-    protected IConnection connection;
-    protected IModel channel;
-    protected IConnectionFactory factory;
-    protected IBasicProperties basicProperties;
-    protected List<string> routingKeysFromConfiguration;
-    protected string queueName;
-    protected string consumerTag;
-    protected bool isInitialized;
+    IModel CurrentChannel { get; }
+    string CurrentQueueName { get; }
+    string CurrentExchangeType { get; }
+    IBasicProperties CurrentBasicProperties { get; }
+    string CurrentExchangeName { get; }
+    List<string> CurrentRoutingKeys { get; }
+    void InitializeConnection(IProcessor<T> processor);
+    void CloseConnection(IProcessor<T> processor);
+}
 
-    public Factory(IOptions<ServiceConfiguration> serviceConfigurationOptions,
+public class ConnectionBuilder<T> : IConnectionBuilder<T>
+{
+    private readonly IOptions<ServiceConfiguration> serviceConfigurationOptions;
+    private readonly IOptionsMonitor<QueueConfiguration> queueConfigurationOptions;
+    private readonly ILogger<ConnectionBuilder<T>> logger;
+    private QueueConfiguration queueConfiguration;
+    private IConnection connection;
+    private IModel channel;
+    private IConnectionFactory factory;
+    private IBasicProperties basicProperties;
+    private List<string> routingKeysFromConfiguration;
+    private string queueName;
+    public IModel CurrentChannel => channel;
+    public string CurrentQueueName => queueName;
+    public string CurrentExchangeType => queueConfiguration.ExchangeType;
+    public IBasicProperties CurrentBasicProperties => basicProperties;
+    public string CurrentExchangeName => queueConfiguration.ExchangeType;
+    public List<string> CurrentRoutingKeys => routingKeysFromConfiguration;
+
+    private bool isInitialized;
+
+    public ConnectionBuilder(IOptions<ServiceConfiguration> serviceConfigurationOptions,
                         IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                        ILogger logger)
+                        ILogger<ConnectionBuilder<T>> logger)
     {
-        var optionsName = typeof(T).Name;
         this.serviceConfigurationOptions = serviceConfigurationOptions;
-        this.queueConfiguration = queueConfigurationOptions.Get(optionsName);
-        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null
-                                            ? new List<string>()
-                                            : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
+        this.queueConfigurationOptions = queueConfigurationOptions;
         this.logger = logger;
     }
 
-    protected void InitializeConnection(string name)
+    public void InitializeConnection(IProcessor<T> processor)
     {
         if(isInitialized)
             return;
-            
-        logger.LogInformation($"Initializing, {name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
+        
+        //logger.LogInformation($"Initializing, {processor.GetType().Name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
+
+        var optionsName = typeof(T).Name;
+        queueConfiguration = queueConfigurationOptions.Get(optionsName);
+        routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null
+                                            ? new List<string>()
+                                            : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
+
         factory = CreateConnectionFactory();
         connection = factory.CreateConnection();
         channel = connection.CreateModel();
@@ -78,6 +100,21 @@ public abstract class Factory<T>
         isInitialized = true;
     }
 
+    public void CloseConnection(IProcessor<T> processor)
+    {
+        if(!isInitialized
+            || connection == null
+            || !connection.IsOpen)
+            return;
+
+        channel?.Close();
+
+        if (connection.IsOpen)
+            connection.Close();
+
+        logger.LogInformation($"Stopped, {processor.GetType().Name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
+    }
+
     private void CreateDeadLetterExchange(Dictionary<string, object> properties)
     {
         var dlxExchangeName = $"{queueConfiguration.ExchangeName}-DLX";
@@ -99,7 +136,7 @@ public abstract class Factory<T>
         properties["x-dead-letter-exchange"] = dlxExchangeName;
     }
 
-    protected IConnectionFactory CreateConnectionFactory()
+    private IConnectionFactory CreateConnectionFactory()
     {
         return new ConnectionFactory
         {
@@ -109,23 +146,5 @@ public abstract class Factory<T>
             Password = serviceConfigurationOptions.Value.Password,
             AutomaticRecoveryEnabled = true,
         };
-    }
-
-    protected void CloseConnection(string name)
-    {
-        if(!isInitialized
-            || connection == null
-            || !connection.IsOpen)
-            return;
-
-        if(consumerTag != null)
-            channel?.BasicCancel(consumerTag);
-
-        channel?.Close();
-
-        if (connection.IsOpen)
-            connection.Close();
-
-        logger.LogInformation($"Stopped, {name}[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
     }
 }

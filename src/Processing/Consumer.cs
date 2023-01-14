@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -15,41 +14,33 @@ public interface IConsumer
     void StopConsumption();
 }
 
-public interface IConsumer<T> : IDisposable, IConsumer
+public interface IConsumer<T> : IProcessor<T>, IDisposable, IConsumer
 {
     event MessageReceivedDelegate<T> MessageReceived;
     void Acknowledge(InboundMessage<T> message);
     void Reject(InboundMessage<T> message);
 }
 
-public class Consumer<T> : Factory<T>, IConsumer<T>
+public class Consumer<T> : IConsumer<T>
 {
-    ILogger<Consumer<T>> logger;
     public event MessageReceivedDelegate<T> MessageReceived;
-    protected readonly static object locker = new object();
+    private readonly IConnectionBuilder<T> connectionBuilder;
+    private readonly ILogger<Consumer<T>> logger;
     protected bool disposedValue;
+    private string consumerTag;
+    protected readonly static object locker = new object();
 
-    public Consumer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
-                    IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                    ILogger<Consumer<T>> logger)
-            : base(serviceConfigurationOptions, 
-                    queueConfigurationOptions,
-                    logger)
-        
+    public Consumer(IConnectionBuilder<T> connectionBuilder, ILogger<Consumer<T>> logger)
     {
+        this.connectionBuilder = connectionBuilder;
         this.logger = logger;
-    }
-
-    protected EventingBasicConsumer CreateEventingConsumer()
-    {
-        return new EventingBasicConsumer(channel);
     }
 
     public void StartConsumption()
     {
-        InitializeConnection("Consumer");
+        connectionBuilder.InitializeConnection(this);
 
-        var consumer = CreateEventingConsumer();
+        var consumer = new EventingBasicConsumer(connectionBuilder.CurrentChannel);
 
         consumer.Received += (channel, eventArgs) =>
           {
@@ -79,24 +70,27 @@ public class Consumer<T> : Factory<T>, IConsumer<T>
               }
           };
 
-        consumerTag = channel.BasicConsume(queueName, false, consumer);
+        consumerTag = connectionBuilder.CurrentChannel.BasicConsume(connectionBuilder.CurrentQueueName, false, consumer);
 
-        logger.LogInformation($"Started Listening, Consumer[{typeof(T).Name}] -> Queue[{queueConfiguration.QueueName}]");
+        logger.LogInformation($"Started Listening, Consumer[{typeof(T).Name}] -> Queue[{connectionBuilder.CurrentQueueName}]");
     }
 
     public void StopConsumption()
     {
-        CloseConnection("Consumer");
+        if(consumerTag != null)
+            connectionBuilder.CurrentChannel?.BasicCancel(consumerTag);
+
+        connectionBuilder.CloseConnection(this);
     }
 
     public void Acknowledge(InboundMessage<T> message)
     {
-        channel?.BasicAck(message.DeliveryTag, false);
+        connectionBuilder.CurrentChannel?.BasicAck(message.DeliveryTag, false);
     }
 
     public void Reject(InboundMessage<T> message)
     {
-        channel?.BasicReject(message.DeliveryTag, false);
+        connectionBuilder.CurrentChannel?.BasicReject(message.DeliveryTag, false);
     }
 
     protected virtual void Dispose(bool disposing)

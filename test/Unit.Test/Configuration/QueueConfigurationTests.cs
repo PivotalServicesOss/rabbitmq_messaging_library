@@ -1,7 +1,3 @@
-using System;
-using Xunit;
-using FluentAssertions;
-
 namespace Unit.Test
 {
     public class QueueConfigurationTests
