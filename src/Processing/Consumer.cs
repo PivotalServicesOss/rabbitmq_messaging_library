@@ -18,7 +18,7 @@ public interface IConsumer<T> : IProcessor<T>, IConsumer
 {
     event MessageReceivedDelegate<T> MessageReceived;
     void Acknowledge(InboundMessage<T> message);
-    void Nack(InboundMessage<T> message, bool requeue = false);
+    void Nack(InboundMessage<T> message, bool requeue = true);
     void Reject(InboundMessage<T> message, bool requeue = false);
 }
 
