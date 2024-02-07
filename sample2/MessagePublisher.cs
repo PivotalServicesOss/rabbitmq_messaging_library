@@ -20,6 +20,7 @@ public class MessagePublisher : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        var routeKeys = new[] { "my.quorum.test" };
         var text = "Hello RabbitMQ!";
         var index = 1;
         while (true)
@@ -28,7 +29,7 @@ public class MessagePublisher : IHostedService
                 break;
 
             var myMessage = new Message { SomeText = $"{text} - {index}" };
-            producer.Send(new OutboundMessage<Message>(myMessage));
+            producer.Send(new OutboundMessage<Message>(myMessage, routeKeys));
             index++;
             Thread.Sleep(1000);
         }
