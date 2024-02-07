@@ -31,9 +31,9 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
     private string queueName;
     public IModel CurrentChannel => channel;
     public string CurrentQueueName => queueName;
-    public string CurrentExchangeType => queueConfiguration.ExchangeType;
+    public string CurrentExchangeType => queueConfiguration.BindingExchangeType;
     public IBasicProperties CurrentBasicProperties => basicProperties;
-    public string CurrentExchangeName => queueConfiguration.ExchangeName;
+    public string CurrentExchangeName => queueConfiguration.BindingExchangeName;
     public List<string> CurrentRoutingKeys => routingKeysFromConfiguration;
     private bool isInitialized;
     private bool isClosed;
@@ -60,36 +60,33 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
 
             logger.LogInformation("Initializing connection to Queue[{queue}], Exchange[{exchange}], for Message[{message}]",
                                         queueConfiguration.QueueName,
-                                        queueConfiguration.ExchangeName,
+                                        queueConfiguration.BindingExchangeName,
                                         typeof(T).Name);
 
-            routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == null
-                                                ? new List<string>()
+            routingKeysFromConfiguration = queueConfiguration.RoutingKeysCsv == default
+                                                ? new List<string>(){ string.Empty}
                                                 : queueConfiguration.RoutingKeysCsv.Split(',').ToList();
 
             factory = CreateConnectionFactory();
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
 
-            var exchangeName = queueConfiguration.ExchangeName;
-            var properties = new Dictionary<string, object>();
+            var exchangeName = queueConfiguration.BindingExchangeName;
+            var properties = queueConfiguration.AdditionalArguments;
 
             channel.ExchangeDeclare(exchange: exchangeName,
-                                    type: queueConfiguration.ExchangeType);
+                                    type: queueConfiguration.BindingExchangeType);
 
-            if (queueConfiguration.AddDeadLetterQueue)
+            if (queueConfiguration.ConfigureDeadLetterQueue)
             {
                 CreateDeadLetterExchange(properties);
             }
 
-            properties["x-max-length"] = queueConfiguration.MaximumQueueLength;
-            properties["x-max-priority"] = queueConfiguration.MaxPriority;
             queueName = channel.QueueDeclare(queue: queueConfiguration.QueueName,
-                                             durable: queueConfiguration.IsDurable,
-                                             exclusive: queueConfiguration.IsExclusive,
-                                             autoDelete: queueConfiguration.AutoDelete,
-                                             arguments: properties
-                                             ).QueueName;
+                                            durable: queueConfiguration.IsDurable,
+                                            exclusive: queueConfiguration.IsExclusive,
+                                            autoDelete: queueConfiguration.AutoDelete,
+                                            arguments: properties).QueueName;
 
 
             foreach (var routingKey in routingKeysFromConfiguration)
@@ -103,7 +100,10 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
             channel.BasicQos(0, queueConfiguration.PrefetchCount, false);
 
             basicProperties = channel.CreateBasicProperties();
-            basicProperties.Expiration = (queueConfiguration.MessageExpirationInSeconds * 1000).ToString();
+
+            if(queueConfiguration.MessageExpirationInSeconds > default(int))
+                basicProperties.Expiration = (queueConfiguration.MessageExpirationInSeconds * 1000).ToString();
+
             basicProperties.Persistent = queueConfiguration.IsPersistent;
             isInitialized = true;
         }
@@ -126,7 +126,7 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
 
             logger.LogInformation("Closed connection to Queue[{queue}], Exchange[{exchange}], for Message[{message}]",
                                         queueConfiguration.QueueName,
-                                        queueConfiguration.ExchangeName,
+                                        queueConfiguration.BindingExchangeName,
                                         typeof(T).Name);
             isClosed = true;
         }
@@ -134,12 +134,11 @@ public class ConnectionBuilder<T> : IConnectionBuilder<T>
 
     private void CreateDeadLetterExchange(Dictionary<string, object> properties)
     {
-        var dlxExchangeName = $"{queueConfiguration.ExchangeName}-DLX";
+        var dlxExchangeName = $"{queueConfiguration.BindingExchangeName}-DLX";
         var dlxQueueName = $"{queueConfiguration.QueueName}-DLQ";
         var dlxProperties = new Dictionary<string, object>();
 
         channel.ExchangeDeclare(exchange: dlxExchangeName, type: ExchangeType.Direct);
-        dlxProperties["x-max-length"] = queueConfiguration.MaximumQueueLength;
         channel.QueueDeclare(queue: dlxQueueName,
                              durable: false,
                              exclusive: false,

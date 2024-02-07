@@ -21,23 +21,23 @@ public static class Program
             var addDeadLetterQueueForQueue1 = false;
 
             // Configure Queue 1
-            cfg.AddProducer<MyMessage>(exchangeName: exchangeName,
+            cfg.AddProducer<MyMessage>(bindingExchangeName: exchangeName,
                                        queueName: queueOneName,
                                        addDeadLetterQueue: addDeadLetterQueueForQueue1);
 
-            cfg.AddConsumer<MyMessage>(exchangeName: exchangeName,
+            cfg.AddConsumer<MyMessage>(bindingExchangeName: exchangeName,
                                        queueName: queueOneName,
                                        addDeadLetterQueue: addDeadLetterQueueForQueue1);
 
             // Configure Queue 2
-            cfg.AddProducer<MyMessage2>(exchangeName: exchangeName,
+            cfg.AddProducer<MyMessage2>(bindingExchangeName: exchangeName,
                                         queueName: queueTwoName);
 
-            cfg.AddConsumer<MyMessage2>(exchangeName: exchangeName,
+            cfg.AddConsumer<MyMessage2>(bindingExchangeName: exchangeName,
                                         queueName: queueTwoName);
         });
 
-        // Add a processer to process the consumed message
+        // Add a processor to process the consumed message
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MessageProcessor>());
 
         builder.Services.AddControllers();

@@ -4,11 +4,11 @@ namespace PivotalServices.RabbitMQ.Messaging;
 
 public interface IConfigurator
 {
-    void AddConsumer<T>(string exchangeName,
+    void AddConsumer<T>(string bindingExchangeName,
                         string queueName,
                         bool addDeadLetterQueue = true,
                         Action<QueueConfiguration> configure = null);
-    void AddProducer<T>(string exchangeName,
+    void AddProducer<T>(string bindingExchangeName,
                         string queueName,
                         bool addDeadLetterQueue = true,
                         Action<QueueConfiguration> configure = null);
@@ -23,7 +23,7 @@ public class Configurator : IConfigurator
         this.services = services;
     }
 
-    public void AddConsumer<T>(string exchangeName,
+    public void AddConsumer<T>(string bindingExchangeName,
                                string queueName,
                                bool addDeadLetterQueue = true,
                                Action<QueueConfiguration> configure = null)
@@ -31,9 +31,9 @@ public class Configurator : IConfigurator
         var optionsName = typeof(T).Name;
         services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
-            cfg.ExchangeName = exchangeName;
+            cfg.BindingExchangeName = bindingExchangeName;
             cfg.QueueName = queueName;
-            cfg.AddDeadLetterQueue = addDeadLetterQueue;
+            cfg.ConfigureDeadLetterQueue = addDeadLetterQueue;
         });
 
         if (configure != null)
@@ -46,17 +46,17 @@ public class Configurator : IConfigurator
         Global.ConsumerTypes.Add(typeof(IConsumer<T>));
     }
 
-    public void AddProducer<T>(string exchangeName,
+    public void AddProducer<T>(string bindingExchangeName,
                                string queueName,
-                               bool addDeadLetterQueue = true,
+                               bool configureDeadLetterQueue = true,
                                Action<QueueConfiguration> configure = null)
     {
         var optionsName = typeof(T).Name;
         services.Configure<QueueConfiguration>(optionsName, cfg =>
         {
-            cfg.ExchangeName = exchangeName;
+            cfg.BindingExchangeName = bindingExchangeName;
             cfg.QueueName = queueName;
-            cfg.AddDeadLetterQueue = addDeadLetterQueue;
+            cfg.ConfigureDeadLetterQueue = configureDeadLetterQueue;
         });
 
         if (configure != null)
