@@ -18,23 +18,25 @@ public static class Program
                     queueName: "publisher-queue",
                     addDeadLetterQueue: false, (queueConfiguration) =>
                     {
-                        queueConfiguration.BindingExchangeType = ExchangeType.Fanout;
+                        queueConfiguration.BindingExchangeType = ExchangeType.Topic;
                         queueConfiguration.AdditionalArguments.Add("x-queue-type", "quorum");
                     });
 
                 cfg.AddConsumer<Queue1Message>(bindingExchangeName: "second-exchange",
-                    queueName: "queue-one",
+                    queueName: "queue-one-all-test",
                     addDeadLetterQueue: false, (queueConfiguration) =>
                     {
-                        queueConfiguration.BindingExchangeType = ExchangeType.Fanout;
+                        queueConfiguration.BindingExchangeType = ExchangeType.Topic;
+                        queueConfiguration.RoutingKeysCsv = "my.*.test";
                         queueConfiguration.AdditionalArguments.Add("x-queue-type", "quorum");
                     });
 
                 cfg.AddConsumer<Queue2Message>(bindingExchangeName: "second-exchange",
-                    queueName: "queue-two",
+                    queueName: "queue-two-all-quorum",
                     addDeadLetterQueue: false, (queueConfiguration) =>
                     {
-                        queueConfiguration.BindingExchangeType = ExchangeType.Fanout;
+                        queueConfiguration.BindingExchangeType = ExchangeType.Topic;
+                        queueConfiguration.RoutingKeysCsv = "my.quorum.*";
                         queueConfiguration.AdditionalArguments.Add("x-queue-type", "quorum");
                     });
             });

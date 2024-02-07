@@ -18,7 +18,8 @@ public interface IConsumer<T> : IProcessor<T>, IConsumer
 {
     event MessageReceivedDelegate<T> MessageReceived;
     void Acknowledge(InboundMessage<T> message);
-    void Reject(InboundMessage<T> message);
+    void Nack(InboundMessage<T> message, bool requeue = false);
+    void Reject(InboundMessage<T> message, bool requeue = false);
 }
 
 public class Consumer<T> : IConsumer<T>
@@ -98,8 +99,13 @@ public class Consumer<T> : IConsumer<T>
         connectionBuilder.CurrentChannel?.BasicAck(message.DeliveryTag, false);
     }
 
-    public void Reject(InboundMessage<T> message)
+    public void Nack(InboundMessage<T> message, bool requeue = true)
     {
-        connectionBuilder.CurrentChannel?.BasicReject(message.DeliveryTag, false);
+        connectionBuilder.CurrentChannel?.BasicNack(message.DeliveryTag, false, requeue);
+    }
+
+    public void Reject(InboundMessage<T> message, bool requeue = false)
+    {
+        connectionBuilder.CurrentChannel?.BasicReject(message.DeliveryTag, requeue);
     }
 }

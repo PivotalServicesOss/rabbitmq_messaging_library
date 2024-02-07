@@ -12,12 +12,12 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
-    <PackageReference Include="PivotalServices.RabbitMQ.Messaging" Version="1.0.3" />
+    <!--<PackageReference Include="PivotalServices.RabbitMQ.Messaging" Version="1.0.3" />-->
   </ItemGroup>
 
-  <!-- <ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\src\Rabbit.Messaging.csproj" />
-  </ItemGroup> -->
+  </ItemGroup>
 
   <ItemGroup>
     <None Update="appsettings.json">
