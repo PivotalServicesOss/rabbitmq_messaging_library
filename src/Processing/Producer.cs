@@ -1,95 +1,74 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using System.Text;
 
 namespace PivotalServices.RabbitMQ.Messaging;
 
-public interface IProducer
+public interface IProducer<T> : IProcessor<T>
 {
-    void Close();
+    void Send(OutboundMessage<T> message);  
 }
 
-public interface IProducer<T> : IProducer, IDisposable
+public class Producer<T> : IProducer<T>
 {
-    void Send(OutboundMessage<T> message);
-}
-
-public class Producer<T> : Factory<T>, IProducer<T>
-{
-    ILogger<Producer<T>> logger;
-    protected bool disposedValue;
+    private readonly IConnectionBuilder<T> connectionBuilder;
+    private readonly ILogger<Producer<T>> logger;
     private bool isQueueBindingRequired;
 
-    public Producer(IOptions<ServiceConfiguration> serviceConfigurationOptions,
-                    IOptionsMonitor<QueueConfiguration> queueConfigurationOptions,
-                    ILogger<Producer<T>> logger)
-            : base(serviceConfigurationOptions,
-                    queueConfigurationOptions,
-                    logger)
 
+    public Producer(IConnectionBuilder<T> connectionBuilder, ILogger<Producer<T>> logger)
     {
+        this.connectionBuilder = connectionBuilder;
         this.logger = logger;
-        isQueueBindingRequired = queueConfiguration.ExchangeType != ExchangeType.Topic
-                                    && queueConfiguration.ExchangeType != ExchangeType.Fanout;
     }
 
     public void Send(OutboundMessage<T> message)
     {
-        InitializeConnection("Producer");
+        connectionBuilder.InitializeConnection();
+        logger.LogInformation("Sending Message[{message}] from Queue[{queue}], Exchange[{exchange}], CorrelationId: {correlation}",
+                                typeof(T).Name,
+                                connectionBuilder.CurrentQueueName,
+                                connectionBuilder.CurrentExchangeName,
+                                message.CorrelationId);
+
+        isQueueBindingRequired = connectionBuilder.CurrentExchangeType != ExchangeType.Topic
+                                    && connectionBuilder.CurrentExchangeType != ExchangeType.Fanout;
 
         var serializedMessage = JsonConvert.SerializeObject(message.Content);
         var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
 
         if (message.RouteKeys == null || !message.RouteKeys.Any())
         {
-            if (routingKeysFromConfiguration.Any())
+            if (connectionBuilder.CurrentRoutingKeys.Any())
             {
-                message.RouteKeys = routingKeysFromConfiguration.ToArray();
+                message.RouteKeys = connectionBuilder.CurrentRoutingKeys.ToArray();
             }
             else
             {
-                message.RouteKeys = new[] { queueName };
+                message.RouteKeys = new[] { connectionBuilder.CurrentQueueName };
             }
         }
 
-        basicProperties.CorrelationId = message.CorrelationId;
-        basicProperties.ReplyTo = message.ReplyTo;
-        basicProperties.Priority = Convert.ToByte(message.Priority);
+        connectionBuilder.CurrentBasicProperties.CorrelationId = message.CorrelationId;
+        connectionBuilder.CurrentBasicProperties.ReplyTo = message.ReplyTo;
+        connectionBuilder.CurrentBasicProperties.Priority = Convert.ToByte(message.Priority);
 
         foreach (var routingKey in message.RouteKeys)
         {
             if (isQueueBindingRequired)
             {
-                channel.QueueBind(queueName, queueConfiguration.ExchangeName, routingKey.Trim(), null);
+                connectionBuilder.CurrentChannel.QueueBind(connectionBuilder.CurrentQueueName,
+                                                           connectionBuilder.CurrentExchangeName,
+                                                           routingKey.Trim(),
+                                                           null);
             }
 
-            channel.BasicPublish(queueConfiguration.ExchangeName, routingKey.Trim(), basicProperties, messageBody);
-            logger.LogDebug($"Sent message {JsonConvert.SerializeObject(message)}");
-            logger.LogInformation($"Sent a message with CorreleationId {message.CorrelationId}");
+            connectionBuilder.CurrentChannel.BasicPublish(connectionBuilder.CurrentExchangeName,
+                                                          routingKey.Trim(),
+                                                          connectionBuilder.CurrentBasicProperties,
+                                                          messageBody);
+            logger.LogDebug($"Sent, {JsonConvert.SerializeObject(message)}");
         }
-    }
-
-    public void Close()
-    {
-        CloseConnection("Producer");
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposedValue)
-        {
-            if (disposing)
-                Close();
-
-            disposedValue = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 }
