@@ -44,7 +44,7 @@ Build | PivotalServices.RabbitMQ.Messaging |
     using PivotalServices.RabbitMQ.Messaging;
     ...
     builder.Services.AddRabbitMQ(cfg => {
-        cfg.AddProducer<MyMessage>(exchangeName: "exchangeName",
+        cfg.AddProducer<MyMessage>(bindingExchangeName: "exchangeName",
                                        queueName: "queueOneName");
     });
 ```
@@ -55,12 +55,13 @@ Build | PivotalServices.RabbitMQ.Messaging |
     using PivotalServices.RabbitMQ.Messaging;
     ...
     builder.Services.AddRabbitMQ(cfg => {
-        cfg.AddProducer<MyMessage>(exchangeName: "exchangeName",
+        cfg.AddProducer<MyMessage>(bindingExchangeName: "exchangeName",
                                        queueName: "queueOneName",
                                        addDeadLetterQueue: false,
                                        options => {
                                             options.MessageExpirationInSeconds = 0;
                                             options.MaximumQueueLength = 1000;
+                                            options.AdditionalArguments.Add("x-queue-type", "quorum");
                                        });
     });
 ```
@@ -92,7 +93,7 @@ Build | PivotalServices.RabbitMQ.Messaging |
     using PivotalServices.RabbitMQ.Messaging;
     ...
     builder.Services.AddRabbitMQ(cfg => {
-        cfg.AddConsumer<MyMessage>(exchangeName: "exchangeName",
+        cfg.AddConsumer<MyMessage>(bindingExchangeName: "exchangeName",
                                        queueName: "queueOneName");
     });
 ```
@@ -103,12 +104,13 @@ Build | PivotalServices.RabbitMQ.Messaging |
     using PivotalServices.RabbitMQ.Messaging;
     ...
     builder.Services.AddRabbitMQ(cfg => {
-        cfg.AddConsumer<MyMessage>(exchangeName: "exchangeName",
+        cfg.AddConsumer<MyMessage>(bindingExchangeName: "exchangeName",
                                        queueName: "queueOneName",
                                        addDeadLetterQueue: false,
                                        options => {
                                             options.MessageExpirationInSeconds = 0;
                                             options.MaximumQueueLength = 1000;
+                                            options.AdditionalArguments.Add("x-queue-type", "quorum");
                                        });
     });
 ```
